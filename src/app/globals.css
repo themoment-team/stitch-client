@@ -11,6 +11,9 @@
   --danger: #ff0002;
   --neu-light: #ffffff;
   --neu-dark: #d1d1d6;
+  --accent: #f6e9ec;
+  --accent-light: #ffffff;
+  --accent-dark: #d8c2c8;
 }
 
 @theme inline {
@@ -21,6 +24,7 @@
   --color-subtle: var(--subtle);
   --color-hairline: var(--hairline);
   --color-danger: var(--danger);
+  --color-accent: var(--accent);
   --font-sans:
     "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
