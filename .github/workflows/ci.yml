@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-build:
+    name: Lint and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Success Discord Notification
+        uses: sarisia/actions-status-discord@v1.15.5
+        if: success()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: '✅ CI 성공'
+          status: success
+          content: 'PR을 확인해주세요.'
+          username: Stitch-client bot
+          color: 0x4CAF50
+
+      - name: Failure Discord Notification
+        uses: sarisia/actions-status-discord@v1.15.5
+        if: failure()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: '❌ CI 실패'
+          status: failure
+          content: '에러를 확인해주세요.'
+          username: Stitch-client bot
+          color: 0xe74c3c
