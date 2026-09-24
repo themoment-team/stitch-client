@@ -1,0 +1,82 @@
+name: Release PR
+
+on:
+  schedule:
+    # 매월 1일, 15일 09:00 KST (00:00 UTC)
+    - cron: '0 0 1,15 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-release-pr:
+    name: Create develop → main PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check Release Conditions
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$(gh pr list --base main --head develop --state open --json number --jq '.[].number')" ]; then
+            echo "이미 열려 있는 develop → main PR이 있어 건너뜁니다."
+            echo "should_create=false" >> "$GITHUB_OUTPUT"
+          elif [ "$(git rev-list --count origin/main..origin/develop)" -eq 0 ]; then
+            echo "main에 반영할 develop 변경 사항이 없어 건너뜁니다."
+            echo "should_create=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_create=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Pull Request
+        id: create_pr
+        if: steps.check.outputs.should_create == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TODAY=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          COMMITS=$(git log --no-merges --pretty='- %s (%h)' origin/main..origin/develop)
+
+          PR_URL=$(gh pr create \
+            --base main \
+            --head develop \
+            --title "release: ${TODAY} 정기 배포" \
+            --body "## 개요 💡
+
+          > ${TODAY} 정기 배포를 위해 develop 브랜치를 main에 반영합니다.
+
+          ## 작업내용 ⌨️
+
+          ${COMMITS}")
+
+          echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Success Discord Notification
+        uses: sarisia/actions-status-discord@v1.15.5
+        if: success() && steps.create_pr.outcome == 'success'
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: '🚀 정기 배포 PR 생성'
+          status: success
+          content: '정기 배포 PR이 생성되었습니다. ${{ steps.create_pr.outputs.url }}'
+          username: Stitch-client bot
+          color: 0x4CAF50
+
+      - name: Failure Discord Notification
+        uses: sarisia/actions-status-discord@v1.15.5
+        if: failure()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: '❌ 정기 배포 PR 생성 실패'
+          status: failure
+          content: '에러를 확인해주세요.'
+          username: Stitch-client bot
+          color: 0xe74c3c
