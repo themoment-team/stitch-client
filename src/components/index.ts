@@ -1,2 +1,8 @@
+export { default as ColorPalette } from "./ColorPalette";
+export { default as Icon } from "./Icon";
+export { default as PixelCanvas } from "./PixelCanvas";
 export { default as StepButton } from "./StepButton";
 export { default as StepCard } from "./StepCard";
+export { default as StepLabel } from "./StepLabel";
+export { default as Timer } from "./Timer";
+export { default as ToolButton } from "./ToolButton";
