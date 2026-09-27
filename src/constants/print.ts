@@ -19,4 +19,4 @@ export const LABEL_SHEET = {
 export const LABEL_DRAWING_SIZE = 45;
 
 /** 다운로드 QR 칸에 들어갈 QR 크기 */
-export const LABEL_QR_SIZE = 40;
+export const LABEL_QR_SIZE = 28;
