@@ -41,7 +41,7 @@ const LabelSheet = ({ drawingImage, qrCode }: LabelSheetProps) => (
   >
     {Array.from({ length: LABEL_COUNT }, (_, index) =>
       index === LABEL_COUNT - 1 ? (
-        <div key={index} className="flex items-center justify-center gap-[4mm]">
+        <div key={index} className="flex flex-col items-center justify-center gap-[2mm]">
           {/* eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 data URL이라 최적화 대상이 아님 */}
           <img
             src={qrCode}
@@ -49,12 +49,9 @@ const LabelSheet = ({ drawingImage, qrCode }: LabelSheetProps) => (
             className="[image-rendering:pixelated]"
             style={{ width: `${LABEL_QR_SIZE}mm`, height: `${LABEL_QR_SIZE}mm` }}
           />
-          <div className="flex flex-col gap-[1.5mm] text-left text-ink">
-            <span className="text-[14pt] font-black">Stitch</span>
-            <span className="text-[8pt] leading-snug font-medium">
-              QR 코드를 찍으면
-              <br />내 그림을 저장할 수 있어요
-            </span>
+          <div className="flex flex-col items-center gap-[0.5mm] text-center text-ink">
+            <span className="text-[12pt] font-black">Stitch</span>
+            <span className="text-[8pt] font-medium">QR 코드를 찍으면 내 그림을 저장할 수 있어요</span>
           </div>
         </div>
       ) : (
