@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { AIBlockedError, convertDrawing } from "@/apis";
 import { Icon, PixelPreview, StepButton, StepCard, StepLabel } from "@/components";
-import { AI_CONVERT_LIMIT } from "@/constants";
+import { AI_CONVERT_LIMIT, PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
 import type { ConvertChoice, ConvertSnapshot, Drawing, Pixels } from "@/types";
 import { isEmptyPixels } from "@/utils";
 
@@ -14,17 +14,11 @@ interface ConvertPageProps {
   initialSnapshot: ConvertSnapshot | null;
   onConverted: () => void;
   onBack: (snapshot: ConvertSnapshot) => void;
-  /** 선택한 그림(내 그림 또는 AI 변환)으로 다음 단계 진행 */
-  onNext: (drawing: Drawing) => void;
+  /** 선택한 그림(내 그림 또는 AI 변환)으로 다음 단계 진행. 돌아왔을 때를 위해 변환 결과도 함께 전달 */
+  onNext: (drawing: Drawing, snapshot: ConvertSnapshot) => void;
 }
 
 type ConvertStatus = "idle" | "loading" | "blocked" | "error";
-
-const primaryButtonStyles =
-  "flex cursor-pointer items-center justify-center gap-1.5 rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-ink shadow-[5px_5px_10px_var(--accent-dark),-5px_-5px_10px_var(--accent-light)] transition-all duration-200 enabled:active:shadow-[inset_3px_3px_6px_var(--accent-dark),inset_-3px_-3px_6px_var(--accent-light)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none";
-
-const secondaryButtonStyles =
-  "flex cursor-pointer items-center justify-center gap-1.5 rounded-2xl bg-background px-5 py-3 text-sm font-semibold text-muted shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)] transition-all duration-200 enabled:hover:text-ink enabled:active:shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)] disabled:cursor-not-allowed disabled:opacity-40";
 
 const cardStyles = "flex w-full flex-col gap-3 rounded-3xl p-3 text-left sm:p-4";
 const cardShadow = "shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]";
@@ -111,7 +105,7 @@ const ConvertPage = ({
 
   const handleNext = () => {
     const pixels = choice === "original" ? drawing.pixels : (results[choice] ?? drawing.pixels);
-    onNext({ size: drawing.size, pixels });
+    onNext({ size: drawing.size, pixels }, { results, choice });
   };
 
   return (
@@ -187,12 +181,12 @@ const ConvertPage = ({
 
       <div className="flex w-full max-w-3xl flex-col items-center gap-3">
         <div className="flex flex-wrap justify-center gap-3">
-          <button type="button" onClick={handleConvert} disabled={!canConvert} className={primaryButtonStyles}>
+          <button type="button" onClick={handleConvert} disabled={!canConvert} className={PRIMARY_BUTTON_STYLES}>
             <Icon name="sparkles" className="size-4" />
             {hasResult ? "한 번 더 다듬기" : "AI로 다듬기"}
           </button>
           {!hasResult && (
-            <button type="button" onClick={handleNext} disabled={isLoading} className={secondaryButtonStyles}>
+            <button type="button" onClick={handleNext} disabled={isLoading} className={SECONDARY_BUTTON_STYLES}>
               괜찮아요, 그대로 할게요
             </button>
           )}
@@ -201,7 +195,7 @@ const ConvertPage = ({
               type="button"
               onClick={() => setChoice("original")}
               disabled={isLoading || choice === "original"}
-              className={secondaryButtonStyles}
+              className={SECONDARY_BUTTON_STYLES}
             >
               <Icon name="undo" className="size-4" />
               되돌리기

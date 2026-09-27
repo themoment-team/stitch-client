@@ -34,3 +34,26 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* 출력 단계에서 인쇄물(.print-target)만 A4 한 장에 찍히도록 나머지 화면을 숨김 */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-target,
+  .print-target * {
+    visibility: visible;
+  }
+
+  .print-target {
+    position: absolute;
+    inset: 0;
+    background: #ffffff;
+  }
+}
