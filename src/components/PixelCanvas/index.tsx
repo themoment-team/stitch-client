@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { Drawing } from "@/types";
+import type { Drawing, Pixels } from "@/types";
 import { type Cell, getLineCells } from "@/utils";
 
 interface PixelCanvasProps {
   drawing: Drawing;
+  /** 따라 그릴 수 있게 연하게 깔아 두는 도안. 그림(drawing)에는 포함되지 않음 */
+  guide?: Pixels | null;
   disabled?: boolean;
   onStrokeStart: () => void;
   onPaint: (indices: number[]) => void;
@@ -12,9 +14,11 @@ interface PixelCanvasProps {
 
 const DEFAULT_RESOLUTION = 640;
 const GRID_LINE_COLOR = "rgba(34, 34, 34, 0.08)";
+const GUIDE_OPACITY = 0.3;
 
 const PixelCanvas = ({
   drawing,
+  guide = null,
   disabled = false,
   onStrokeStart,
   onPaint,
@@ -45,15 +49,24 @@ const PixelCanvas = ({
 
     // 칸 경계를 정수 픽셀로 맞춰 칸 사이 틈이나 번짐이 없도록 함
     const edge = (line: number) => Math.round((line * resolution) / size);
+    const fillCells = (cells: Pixels) =>
+      cells.forEach((color, index) => {
+        if (!color) return;
+        const x = index % size;
+        const y = Math.floor(index / size);
+        context.fillStyle = color;
+        context.fillRect(edge(x), edge(y), edge(x + 1) - edge(x), edge(y + 1) - edge(y));
+      });
+
     context.clearRect(0, 0, resolution, resolution);
 
-    pixels.forEach((color, index) => {
-      if (!color) return;
-      const x = index % size;
-      const y = Math.floor(index / size);
-      context.fillStyle = color;
-      context.fillRect(edge(x), edge(y), edge(x + 1) - edge(x), edge(y + 1) - edge(y));
-    });
+    // 도안은 연하게 먼저 깔고, 그 위에 사용자가 그린 픽셀을 진하게 덮음
+    if (guide) {
+      context.globalAlpha = GUIDE_OPACITY;
+      fillCells(guide);
+      context.globalAlpha = 1;
+    }
+    fillCells(pixels);
 
     const lineWidth = Math.max(1, Math.floor(window.devicePixelRatio));
     context.fillStyle = GRID_LINE_COLOR;
@@ -61,7 +74,7 @@ const PixelCanvas = ({
       context.fillRect(edge(line), 0, lineWidth, resolution);
       context.fillRect(0, edge(line), resolution, lineWidth);
     }
-  }, [size, pixels, resolution]);
+  }, [size, pixels, guide, resolution]);
 
   const toIndex = ({ x, y }: Cell) => y * size + x;
 

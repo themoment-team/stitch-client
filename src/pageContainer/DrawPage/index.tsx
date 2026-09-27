@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { DraftBlockedError, DraftLimitError, generateDraft } from "@/apis";
+import { AIBlockedError, DraftLimitError, generateDraft } from "@/apis";
 import {
   ColorPalette,
   Icon,
@@ -20,11 +20,13 @@ interface DrawPageProps {
   endAt: number;
   /** 이전으로 갔다 돌아왔을 때 이어서 그릴 그림 */
   initialDrawing: Drawing | null;
+  /** 이전으로 갔다 돌아왔을 때 다시 깔아 둘 도안 */
+  initialGuide: Drawing | null;
   /** 남은 AI 도안 생성 횟수. 이전으로 갔다 와도 유지되도록 페이지에서 관리 */
   aiDraftRemaining: number;
   onAIDraftUsed: () => void;
-  onBack: (drawing: Drawing) => void;
-  onNext: (drawing: Drawing) => void;
+  onBack: (drawing: Drawing, guide: Drawing | null) => void;
+  onNext: (drawing: Drawing, guide: Drawing | null) => void;
 }
 
 const EMPTY_DRAWING: Drawing = {
@@ -34,21 +36,28 @@ const EMPTY_DRAWING: Drawing = {
 
 type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "error";
 
+const guideButtonStyles =
+  "cursor-pointer rounded-full bg-background px-3 py-1.5 text-xs font-semibold text-muted shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] transition-all duration-200 hover:text-ink active:shadow-[inset_2px_2px_4px_var(--neu-dark),inset_-2px_-2px_4px_var(--neu-light)]";
+
 const DrawPage = ({
   endAt,
   initialDrawing,
+  initialGuide,
   aiDraftRemaining,
   onAIDraftUsed,
   onBack,
   onNext,
 }: DrawPageProps) => {
-  const { drawing, canUndo, startStroke, paint, endStroke, undo, reset, resize, load } =
+  const { drawing, canUndo, startStroke, paint, endStroke, undo, reset, resize } =
     useDrawingHistory(initialDrawing ?? EMPTY_DRAWING);
   const { remaining, isOver } = useCountdown(endAt);
   const [tool, setTool] = useState<DrawTool>(DRAW_TOOL.PEN);
   const [color, setColor] = useState(PALETTE[0]);
   const [keyword, setKeyword] = useState("");
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
+  // 도안은 그림과 별도로 연하게 깔아 두고 따라 그리는 밑그림. 최종 그림에는 포함되지 않음
+  const [guide, setGuide] = useState<Drawing | null>(initialGuide);
+  const [isGuideVisible, setIsGuideVisible] = useState(true);
   // 화면이 갱신되기 전에 생성 버튼을 연달아 눌러도 요청이 한 번만 가도록 막음 (비용·횟수 중복 방지)
   const isRequestingDraftRef = useRef(false);
 
@@ -56,9 +65,12 @@ const DrawPage = ({
   // AI가 도안을 그리는 동안에도 캔버스는 계속 쓸 수 있고, 도안 입력과 캔버스 크기만 잠금
   const isLocked = isOver;
   const isDraftLoading = draftStatus === "loading";
+  // 도안은 만든 캔버스 크기에서만 보여줌 (크기를 바꿨다 되돌리면 다시 보임)
+  const visibleGuide = isGuideVisible && guide?.size === drawing.size ? guide.pixels : null;
   // 시간이 끝나면 이전으로 돌아가 다시 그릴 수 없고, 빈 그림이어도 다음으로만 진행
-  // AI 도안을 기다리는 중에 이전으로 가면 결과가 버려지고 횟수만 차감되므로 이전도 잠금
   const canGoNext = isOver || !isEmpty;
+  // AI 도안을 기다리는 중에 이전으로 가면 결과가 버려지고 횟수만 차감되므로 이전도 잠금
+  const canGoBack = !isOver && !isDraftLoading;
 
   const handlePaint = (indices: number[]) => {
     paint(indices, tool === DRAW_TOOL.PEN ? color : null);
@@ -85,11 +97,11 @@ const DrawPage = ({
       });
       // 실패한 요청은 차감하지 않고, 성공해서 비용이 든 경우에만 횟수를 씀
       if (usedAI) onAIDraftUsed();
-      // 도안을 기다리는 사이 제한 시간이 끝났다면 그림을 바꾸지 않음
-      if (Date.now() < endAt) load({ size, pixels });
+      setGuide({ size, pixels });
+      setIsGuideVisible(true);
       setDraftStatus("idle");
     } catch (error) {
-      if (error instanceof DraftBlockedError) setDraftStatus("blocked");
+      if (error instanceof AIBlockedError) setDraftStatus("blocked");
       else if (error instanceof DraftLimitError) setDraftStatus("limit");
       else setDraftStatus("error");
     } finally {
@@ -101,7 +113,7 @@ const DrawPage = ({
     <StepCard size="wide">
       <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
         <div className="justify-self-start">
-          <StepButton variant="back" onClick={() => onBack(drawing)} disabled={isOver || isDraftLoading}>
+          <StepButton variant="back" onClick={() => onBack(drawing, guide)} disabled={!canGoBack}>
             이전
           </StepButton>
         </div>
@@ -121,6 +133,7 @@ const DrawPage = ({
           <div className="w-full max-w-[min(34rem,60dvh)] rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]">
             <PixelCanvas
               drawing={drawing}
+              guide={visibleGuide}
               disabled={isLocked}
               onStrokeStart={startStroke}
               onPaint={handlePaint}
@@ -208,8 +221,27 @@ const DrawPage = ({
             </div>
             {isDraftLoading && (
               <p className="text-xs font-medium text-muted" role="status">
-                AI가 도안을 그리고 있어요. 10~15초 정도 걸리고, 완성되면 캔버스가 도안으로 바뀌어요.
+                AI가 도안을 그리고 있어요. 10~15초 정도 걸리고, 완성되면 캔버스에 연하게 깔려요.
               </p>
+            )}
+            {guide && (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsGuideVisible((prev) => !prev)}
+                  className={guideButtonStyles}
+                >
+                  {isGuideVisible ? "도안 숨기기" : "도안 보이기"}
+                </button>
+                <button type="button" onClick={() => setGuide(null)} className={guideButtonStyles}>
+                  도안 지우기
+                </button>
+                {guide.size !== drawing.size && (
+                  <span className="text-xs text-subtle">
+                    도안은 {guide.size}×{guide.size} 캔버스에서 보여요
+                  </span>
+                )}
+              </div>
             )}
             {draftStatus === "blocked" && (
               <p className="text-xs font-medium text-danger" role="alert">
@@ -230,7 +262,7 @@ const DrawPage = ({
         </aside>
       </div>
 
-      <StepButton variant="next" onClick={() => onNext(drawing)} disabled={!canGoNext}>
+      <StepButton variant="next" onClick={() => onNext(drawing, guide)} disabled={!canGoNext}>
         다음
       </StepButton>
     </StepCard>

@@ -16,8 +16,7 @@ type DrawingAction =
   | { type: "STROKE_END" }
   | { type: "UNDO" }
   | { type: "RESET" }
-  | { type: "RESIZE"; size: GridSize }
-  | { type: "LOAD"; drawing: Drawing };
+  | { type: "RESIZE"; size: GridSize };
 
 const pushHistory = (history: Drawing[], drawing: Drawing) =>
   [...history, drawing].slice(-HISTORY_LIMIT);
@@ -66,13 +65,6 @@ const drawingReducer = (state: DrawingState, action: DrawingAction): DrawingStat
         history: pushHistory(state.history, state.current),
         strokeBase: null,
       };
-
-    case "LOAD":
-      return {
-        current: action.drawing,
-        history: pushHistory(state.history, state.current),
-        strokeBase: null,
-      };
   }
 };
 
@@ -94,6 +86,5 @@ export const useDrawingHistory = (initialDrawing: Drawing) => {
     undo: () => dispatch({ type: "UNDO" }),
     reset: () => dispatch({ type: "RESET" }),
     resize: (size: GridSize) => dispatch({ type: "RESIZE", size }),
-    load: (drawing: Drawing) => dispatch({ type: "LOAD", drawing }),
   };
 };
