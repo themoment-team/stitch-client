@@ -1,5 +1,6 @@
 import type { GridSize, Pixels } from "@/types";
 import { findDraftByKeyword, imageToPixels, templateToPixels } from "@/utils";
+import { readImageResponse } from "./imageResponse";
 
 export interface DraftRequest {
   keyword: string;
@@ -14,13 +15,6 @@ export interface DraftResult {
   usedAI: boolean;
 }
 
-interface DraftResponse {
-  image: string;
-}
-
-/** 부적절한 키워드라 AI가 그리기를 거절한 경우 */
-export class DraftBlockedError extends Error {}
-
 /** AI 생성 횟수를 모두 써서 새로 그릴 수 없는 경우 */
 export class DraftLimitError extends Error {}
 
@@ -31,11 +25,7 @@ const requestAIDraft = async (keyword: string, size: GridSize) => {
     body: JSON.stringify({ keyword, size }),
   });
 
-  if (response.status === 422) throw new DraftBlockedError();
-  if (!response.ok) throw new Error(`AI 도안 생성 실패: ${response.status}`);
-
-  const { image }: DraftResponse = await response.json();
-  return imageToPixels(image, size);
+  return imageToPixels(await readImageResponse(response), size);
 };
 
 /**
