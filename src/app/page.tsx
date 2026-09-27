@@ -1,69 +1,117 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+import { AI_CONVERT_LIMIT, AI_DRAFT_LIMIT, DRAW_TIME_LIMIT } from "@/constants";
+import { ConvertPage, DrawPage, PrintPage, StartPage } from "@/pageContainer";
+import { type ConvertSnapshot, type Drawing, type Pixels, STEP, type Step } from "@/types";
+
+interface StitchFlowProps {
+  onRestart: () => void;
+}
+
+const StitchFlow = ({ onRestart }: StitchFlowProps) => {
+  const [step, setStep] = useState<Step>(STEP.START);
+  const [drawing, setDrawing] = useState<Drawing | null>(null);
+  const [guide, setGuide] = useState<Drawing | null>(null);
+  // 그림판 제한 시간은 처음 들어갈 때 한 번만 시작하고, 이전으로 갔다 와도 초기화하지 않음
+  const [drawEndAt, setDrawEndAt] = useState<number | null>(null);
+  // AI 사용 횟수도 이전으로 갔다 와도 초기화되지 않도록 여기서 관리
+  const [aiDraftRemaining, setAIDraftRemaining] = useState(AI_DRAFT_LIMIT);
+  const [convertRemaining, setConvertRemaining] = useState(AI_CONVERT_LIMIT);
+  // 변환 결과와 그 결과를 만든 그림. 그림판에서 그림을 고치면 결과는 버림
+  const [convertSnapshot, setConvertSnapshot] = useState<{
+    source: Drawing;
+    snapshot: ConvertSnapshot;
+  } | null>(null);
+  const [finalDrawing, setFinalDrawing] = useState<Drawing | null>(null);
+  // DB에 저장한 그림과 id. 출력에서 이전으로 갔다가 같은 그림으로 돌아오면 다시 저장하지 않음
+  const [saved, setSaved] = useState<{ pixels: Pixels; id: string } | null>(null);
+
+  const handleStart = () => {
+    setDrawEndAt((prev) => prev ?? Date.now() + DRAW_TIME_LIMIT * 1000);
+    setStep(STEP.DRAW);
+  };
+
+  const saveDrawing = (currentDrawing: Drawing, currentGuide: Drawing | null) => {
+    setDrawing(currentDrawing);
+    setGuide(currentGuide);
+  };
+
+  const handleBackToStart = (currentDrawing: Drawing, currentGuide: Drawing | null) => {
+    saveDrawing(currentDrawing, currentGuide);
+    setStep(STEP.START);
+  };
+
+  const handleDrawComplete = (completedDrawing: Drawing, currentGuide: Drawing | null) => {
+    saveDrawing(completedDrawing, currentGuide);
+    setStep(STEP.CONVERT);
+  };
+
+  const handleAIDraftUsed = () => {
+    setAIDraftRemaining((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleConverted = () => {
+    setConvertRemaining((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleBackToDraw = (snapshot: ConvertSnapshot) => {
+    if (drawing) setConvertSnapshot({ source: drawing, snapshot });
+    setStep(STEP.DRAW);
+  };
+
+  const handleConvertComplete = (selectedDrawing: Drawing, snapshot: ConvertSnapshot) => {
+    if (drawing) setConvertSnapshot({ source: drawing, snapshot });
+    setFinalDrawing(selectedDrawing);
+    setStep(STEP.PRINT);
+  };
+
+  const handleSaved = (id: string) => {
+    if (finalDrawing) setSaved({ pixels: finalDrawing.pixels, id });
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
+      {step === STEP.START && <StartPage onStart={handleStart} />}
+      {step === STEP.DRAW && drawEndAt !== null && (
+        <DrawPage
+          endAt={drawEndAt}
+          initialDrawing={drawing}
+          initialGuide={guide}
+          aiDraftRemaining={aiDraftRemaining}
+          onAIDraftUsed={handleAIDraftUsed}
+          onBack={handleBackToStart}
+          onNext={handleDrawComplete}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
+      {step === STEP.CONVERT && drawing && (
+        <ConvertPage
+          drawing={drawing}
+          convertRemaining={convertRemaining}
+          // 그림을 고치지 않았다면(같은 객체) 이전 변환 결과를 그대로 보여줌
+          initialSnapshot={convertSnapshot?.source === drawing ? convertSnapshot.snapshot : null}
+          onConverted={handleConverted}
+          onBack={handleBackToDraw}
+          onNext={handleConvertComplete}
+        />
+      )}
+      {step === STEP.PRINT && finalDrawing && (
+        <PrintPage
+          drawing={finalDrawing}
+          // 고른 그림이 같으면(같은 픽셀 배열) 저장해 둔 id를 그대로 씀
+          savedId={saved?.pixels === finalDrawing.pixels ? saved.id : null}
+          onSaved={handleSaved}
+          onBack={() => setStep(STEP.CONVERT)}
+          onRestart={onRestart}
+        />
+      )}
     </div>
   );
+};
+
+export default function Home() {
+  // 처음으로 돌아가면 key를 바꿔 그림·타이머·AI 횟수 등 모든 상태를 새로 시작
+  const [sessionKey, setSessionKey] = useState(0);
+
+  return <StitchFlow key={sessionKey} onRestart={() => setSessionKey((prev) => prev + 1)} />;
 }
