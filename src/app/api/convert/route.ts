@@ -1,3 +1,4 @@
+import { consumeQuota, tooManyRequests } from "@/server/rateLimit";
 import { isGridSize, requestOpenAIImage } from "../_lib/openaiImage";
 
 const PNG_DATA_URL_PREFIX = "data:image/png;base64,";
@@ -29,6 +30,8 @@ export async function POST(request: Request) {
   if (buffer.byteLength === 0 || buffer.byteLength > MAX_IMAGE_BYTES) {
     return Response.json({ message: "그림 이미지가 너무 큽니다." }, { status: 413 });
   }
+
+  if (!(await consumeQuota("ai", request))) return tooManyRequests();
 
   return requestOpenAIImage("edits", {
     prompt: buildPrompt(size),

@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { GRID_SIZE, type Drawing, type GridSize } from "@/types";
+import { getSupabase } from "./supabase";
 
 const TABLE = "drawings";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,18 +20,9 @@ export const isValidDrawing = (value: unknown): value is Drawing => {
   );
 };
 
-// RLS로 외부 접근을 모두 막아 두고, 서버에서만 service role 키로 읽고 씀
-const getClient = () => {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다.");
-
-  return createClient(url, key, { auth: { persistSession: false } });
-};
-
 /** 그림을 저장하고 id를 반환 */
 export const insertDrawing = async ({ size, pixels }: Drawing): Promise<string> => {
-  const { data, error } = await getClient().from(TABLE).insert({ size, pixels }).select("id").single();
+  const { data, error } = await getSupabase().from(TABLE).insert({ size, pixels }).select("id").single();
   if (error) throw error;
   return data.id;
 };
@@ -40,7 +31,7 @@ export const insertDrawing = async ({ size, pixels }: Drawing): Promise<string> 
 export const findDrawing = async (id: string): Promise<Drawing | null> => {
   if (!UUID_PATTERN.test(id)) return null;
 
-  const { data, error } = await getClient().from(TABLE).select("size, pixels").eq("id", id).maybeSingle();
+  const { data, error } = await getSupabase().from(TABLE).select("size, pixels").eq("id", id).maybeSingle();
   if (error) throw error;
   return isValidDrawing(data) ? data : null;
 };
