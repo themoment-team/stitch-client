@@ -35,7 +35,7 @@ body {
   font-family: var(--font-sans);
 }
 
-/* 출력 단계에서 인쇄물(.print-target)만 A4 한 장에 찍히도록 나머지 화면을 숨김 */
+/* 출력 단계에서 라벨지 인쇄물(.print-target)만 A4 한 장에 찍히도록 나머지 화면을 숨김 */
 @media print {
   @page {
     size: A4;
@@ -51,9 +51,10 @@ body {
     visibility: visible;
   }
 
+  /* 라벨 위치가 mm 단위로 맞아야 하므로 여백 없이 용지 왼쪽 위 끝에 붙임 */
   .print-target {
     position: absolute;
-    inset: 0;
-    background: #ffffff;
+    top: 0;
+    left: 0;
   }
 }

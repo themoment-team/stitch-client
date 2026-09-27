@@ -1,7 +1,7 @@
 import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { saveDrawing } from "@/apis";
-import { Icon, PixelPreview, StepButton, StepCard, StepLabel } from "@/components";
+import { Icon, LabelSheet, PixelPreview, StepButton, StepCard, StepLabel } from "@/components";
 import { PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
 import type { Drawing } from "@/types";
 import { drawingToPngDataUrl } from "@/utils";
@@ -148,21 +148,8 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
         </div>
       </StepCard>
 
-      {/* 인쇄할 때만 보이는 출력물. 화면의 나머지는 globals.css의 인쇄 스타일에서 숨김 */}
-      {canPrint && (
-        <div className="print-target hidden flex-col items-center gap-[12mm] pt-[30mm] print:flex">
-          {/* eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 data URL이라 최적화 대상이 아님 */}
-          <img src={drawingImage} alt="" className="size-[120mm] [image-rendering:pixelated]" />
-          <div className="flex items-center gap-[6mm]">
-            {/* eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 data URL이라 최적화 대상이 아님 */}
-            <img src={qrCode} alt="" className="size-[32mm] [image-rendering:pixelated]" />
-            <div className="flex flex-col gap-[2mm] text-left text-ink">
-              <span className="text-[16pt] font-black">Stitch</span>
-              <span className="text-[10pt] font-medium">QR 코드를 찍으면 내 그림을 저장할 수 있어요</span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 인쇄할 때만 보이는 라벨지 출력물. 화면의 나머지는 globals.css의 인쇄 스타일에서 숨김 */}
+      {canPrint && <LabelSheet drawingImage={drawingImage} qrCode={qrCode} />}
     </>
   );
 };
