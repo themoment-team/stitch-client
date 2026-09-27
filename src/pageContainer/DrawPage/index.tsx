@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { AIBlockedError, DraftLimitError, generateDraft } from "@/apis";
+import { AIBlockedError, DraftLimitError, generateDraft, RateLimitError } from "@/apis";
 import {
   ColorPalette,
   Icon,
@@ -34,7 +34,7 @@ const EMPTY_DRAWING: Drawing = {
   pixels: createEmptyPixels(GRID_SIZE.SMALL),
 };
 
-type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "error";
+type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "dailyLimit" | "error";
 
 const guideButtonStyles =
   "cursor-pointer rounded-full bg-background px-3 py-1.5 text-xs font-semibold text-muted shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] transition-all duration-200 hover:text-ink active:shadow-[inset_2px_2px_4px_var(--neu-dark),inset_-2px_-2px_4px_var(--neu-light)]";
@@ -103,6 +103,7 @@ const DrawPage = ({
     } catch (error) {
       if (error instanceof AIBlockedError) setDraftStatus("blocked");
       else if (error instanceof DraftLimitError) setDraftStatus("limit");
+      else if (error instanceof RateLimitError) setDraftStatus("dailyLimit");
       else setDraftStatus("error");
     } finally {
       isRequestingDraftRef.current = false;
@@ -251,6 +252,11 @@ const DrawPage = ({
             {draftStatus === "limit" && (
               <p className="text-xs font-medium text-danger" role="alert">
                 AI 생성은 {AI_DRAFT_LIMIT}번까지 할 수 있어요. 고양이, 하트처럼 준비된 도안은 계속 쓸 수 있어요.
+              </p>
+            )}
+            {draftStatus === "dailyLimit" && (
+              <p className="text-xs font-medium text-danger" role="alert">
+                오늘 AI를 쓸 수 있는 횟수가 모두 찼어요. 고양이, 하트처럼 준비된 도안은 계속 쓸 수 있어요.
               </p>
             )}
             {draftStatus === "error" && (

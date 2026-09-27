@@ -1,4 +1,5 @@
 import type { Drawing } from "@/types";
+import { RateLimitError } from "./errors";
 
 interface SaveDrawingResponse {
   id: string;
@@ -11,6 +12,7 @@ export const saveDrawing = async (drawing: Drawing): Promise<string> => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(drawing),
   });
+  if (response.status === 429) throw new RateLimitError();
   if (!response.ok) throw new Error(`그림 저장 실패: ${response.status}`);
 
   const { id }: SaveDrawingResponse = await response.json();

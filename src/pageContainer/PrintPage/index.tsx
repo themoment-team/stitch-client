@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { saveDrawing } from "@/apis";
+import { RateLimitError, saveDrawing } from "@/apis";
 import { Icon, LabelSheet, PixelPreview, StepButton, StepCard, StepLabel } from "@/components";
 import { PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
 import type { Drawing } from "@/types";
@@ -17,7 +17,7 @@ interface PrintPageProps {
   onRestart: () => void;
 }
 
-type SaveStatus = "saving" | "saved" | "error";
+type SaveStatus = "saving" | "saved" | "limit" | "error";
 
 const QR_OPTIONS = { margin: 1, width: 512 };
 
@@ -47,7 +47,7 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
         onSaved(newId);
         setStatus("saved");
       })
-      .catch(() => setStatus("error"))
+      .catch((error) => setStatus(error instanceof RateLimitError ? "limit" : "error"))
       .finally(() => {
         isSavingRef.current = false;
       });
@@ -111,7 +111,7 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
                   role={status === "saving" ? "status" : undefined}
                   className="px-2 text-center text-xs font-medium text-subtle sm:text-sm"
                 >
-                  {status === "error" ? "QR 코드를 만들지 못했어요" : "QR 코드를 만드는 중이에요"}
+                  {status === "saving" ? "QR 코드를 만드는 중이에요" : "QR 코드를 만들지 못했어요"}
                 </span>
               )}
             </div>
@@ -143,6 +143,11 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
           {status === "error" && (
             <p className="text-xs font-medium text-danger" role="alert">
               그림을 저장하지 못했어요. 다시 시도해주세요.
+            </p>
+          )}
+          {status === "limit" && (
+            <p className="text-xs font-medium text-danger" role="alert">
+              오늘 저장할 수 있는 횟수가 모두 찼어요. 내일 다시 이용해주세요.
             </p>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { AIBlockedError, convertDrawing } from "@/apis";
+import { AIBlockedError, convertDrawing, RateLimitError } from "@/apis";
 import { Icon, PixelPreview, StepButton, StepCard, StepLabel } from "@/components";
 import { AI_CONVERT_LIMIT, PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
 import type { ConvertChoice, ConvertSnapshot, Drawing, Pixels } from "@/types";
@@ -18,7 +18,7 @@ interface ConvertPageProps {
   onNext: (drawing: Drawing, snapshot: ConvertSnapshot) => void;
 }
 
-type ConvertStatus = "idle" | "loading" | "blocked" | "error";
+type ConvertStatus = "idle" | "loading" | "blocked" | "limit" | "error";
 
 const cardStyles = "flex w-full flex-col gap-3 rounded-3xl p-3 text-left sm:p-4";
 const cardShadow = "shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]";
@@ -97,7 +97,9 @@ const ConvertPage = ({
       setResults((prev) => [...prev, pixels]);
       setStatus("idle");
     } catch (error) {
-      setStatus(error instanceof AIBlockedError ? "blocked" : "error");
+      if (error instanceof AIBlockedError) setStatus("blocked");
+      else if (error instanceof RateLimitError) setStatus("limit");
+      else setStatus("error");
     } finally {
       isRequestingRef.current = false;
     }
@@ -213,6 +215,11 @@ const ConvertPage = ({
         {status === "blocked" && (
           <p className="text-xs font-medium text-danger" role="alert">
             이 그림은 AI로 다듬을 수 없어요. 내 그림 그대로 진행해주세요.
+          </p>
+        )}
+        {status === "limit" && (
+          <p className="text-xs font-medium text-danger" role="alert">
+            오늘 AI를 쓸 수 있는 횟수가 모두 찼어요. 내 그림 그대로 진행해주세요.
           </p>
         )}
         {status === "error" && (
