@@ -9,7 +9,9 @@ const buildPrompt = (size: number) =>
   `Refine this ${size}x${size} pixel art drawing into a cleaner, cuter ${size}x${size} pixel art sticker.
 Keep the same subject, composition, pose and main colors so it is clearly the same drawing.
 Clean up stray or uneven pixels, make shapes symmetric where natural, add a consistent 1-pixel dark outline, keep flat colors with no gradients or anti-aliasing.
-Every pixel is a huge square block on a ${size} by ${size} grid. Transparent background, no text, no shadow.`;
+Every pixel is a huge square block on a ${size} by ${size} grid. Transparent background, no text, no shadow.
+The input is drawn on a plain white background: treat the white area outside the subject as empty background.
+White or empty areas inside the subject's outline are part of the subject (e.g. a white rabbit) and must stay white, never black or dark.`;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);

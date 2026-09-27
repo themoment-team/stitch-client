@@ -32,6 +32,20 @@ const ICON_PATHS = {
       <path d="M17 17h4" />
     </>
   ),
+  printer: (
+    <>
+      <path d="M6 9V3h12v6" />
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+      <path d="M6 14h12v7H6z" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </>
+  ),
   clock: (
     <>
       <circle cx="12" cy="12" r="9" />

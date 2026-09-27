@@ -1,5 +1,6 @@
 export { default as ColorPalette } from "./ColorPalette";
 export { default as Icon } from "./Icon";
+export { default as LabelSheet } from "./LabelSheet";
 export { default as PixelCanvas } from "./PixelCanvas";
 export { default as PixelPreview } from "./PixelPreview";
 export { default as StepButton } from "./StepButton";

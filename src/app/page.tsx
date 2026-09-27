@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { AI_CONVERT_LIMIT, AI_DRAFT_LIMIT, DRAW_TIME_LIMIT } from "@/constants";
-import { ConvertPage, DrawPage, StartPage } from "@/pageContainer";
-import { type ConvertSnapshot, type Drawing, STEP, type Step } from "@/types";
+import { ConvertPage, DrawPage, PrintPage, StartPage } from "@/pageContainer";
+import { type ConvertSnapshot, type Drawing, type Pixels, STEP, type Step } from "@/types";
 
-export default function Home() {
+interface StitchFlowProps {
+  onRestart: () => void;
+}
+
+const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   const [step, setStep] = useState<Step>(STEP.START);
   const [drawing, setDrawing] = useState<Drawing | null>(null);
   const [guide, setGuide] = useState<Drawing | null>(null);
@@ -19,8 +23,9 @@ export default function Home() {
     source: Drawing;
     snapshot: ConvertSnapshot;
   } | null>(null);
-  // step4(출력)에서 사용
-  const [, setFinalDrawing] = useState<Drawing | null>(null);
+  const [finalDrawing, setFinalDrawing] = useState<Drawing | null>(null);
+  // DB에 저장한 그림과 id. 출력에서 이전으로 갔다가 같은 그림으로 돌아오면 다시 저장하지 않음
+  const [saved, setSaved] = useState<{ pixels: Pixels; id: string } | null>(null);
 
   const handleStart = () => {
     setDrawEndAt((prev) => prev ?? Date.now() + DRAW_TIME_LIMIT * 1000);
@@ -55,9 +60,14 @@ export default function Home() {
     setStep(STEP.DRAW);
   };
 
-  const handleConvertComplete = (selectedDrawing: Drawing) => {
-    // TODO: step4(출력) 연결
+  const handleConvertComplete = (selectedDrawing: Drawing, snapshot: ConvertSnapshot) => {
+    if (drawing) setConvertSnapshot({ source: drawing, snapshot });
     setFinalDrawing(selectedDrawing);
+    setStep(STEP.PRINT);
+  };
+
+  const handleSaved = (id: string) => {
+    if (finalDrawing) setSaved({ pixels: finalDrawing.pixels, id });
   };
 
   return (
@@ -85,6 +95,23 @@ export default function Home() {
           onNext={handleConvertComplete}
         />
       )}
+      {step === STEP.PRINT && finalDrawing && (
+        <PrintPage
+          drawing={finalDrawing}
+          // 고른 그림이 같으면(같은 픽셀 배열) 저장해 둔 id를 그대로 씀
+          savedId={saved?.pixels === finalDrawing.pixels ? saved.id : null}
+          onSaved={handleSaved}
+          onBack={() => setStep(STEP.CONVERT)}
+          onRestart={onRestart}
+        />
+      )}
     </div>
   );
+};
+
+export default function Home() {
+  // 처음으로 돌아가면 key를 바꿔 그림·타이머·AI 횟수 등 모든 상태를 새로 시작
+  const [sessionKey, setSessionKey] = useState(0);
+
+  return <StitchFlow key={sessionKey} onRestart={() => setSessionKey((prev) => prev + 1)} />;
 }
