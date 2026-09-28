@@ -22,10 +22,11 @@ type SaveStatus = "saving" | "saved" | "limit" | "error";
 const QR_OPTIONS = { margin: 1, width: 512 };
 
 /**
- * QR에 넣을 사이트 주소. 없으면 지금 접속한 주소를 씀
+ * QR에 넣을 사이트 주소. 없거나 빈 값이면 지금 접속한 주소를 씀
  * localhost로 띄운 PC에서 인쇄하면 폰이 열 수 없는 주소가 되므로, 로컬 테스트 때는 PC의 IP 주소를 넣음
+ * 빈 값을 그대로 쓰면 QR에 경로만 담겨 휴대폰이 주소로 인식하지 못하므로 빈 문자열도 없는 것으로 처리
  */
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") || undefined;
 
 const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPageProps) => {
   const [id, setId] = useState(savedId);
@@ -66,7 +67,7 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
 
   useEffect(() => {
     if (!id) return;
-    const shareUrl = `${SITE_URL ?? window.location.origin}/share/${id}`;
+    const shareUrl = `${SITE_URL || window.location.origin}/share/${id}`;
     QRCode.toDataURL(shareUrl, QR_OPTIONS)
       .then(setQRCode)
       .catch(() => setStatus("error"));
