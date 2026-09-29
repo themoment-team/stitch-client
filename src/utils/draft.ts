@@ -1,40 +1,33 @@
 import { DRAFT_LIBRARY } from "@/constants";
-import type { DraftTemplate, GridSize, Pixels } from "@/types";
+import { GRID_SIZE, type DraftTemplate, type GridSize, type Pixels } from "@/types";
 
-const TEMPLATE_SIZE = 16;
+// 띄어쓰기와 대소문자만 무시 ("Ice Cream" = "icecream")
+const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, "");
 
-const normalize = (text: string) => text.trim().toLowerCase();
-
-// 긴 이름부터 비교해야 "개구리"가 별칭 "개"(강아지)보다 먼저 잡힘
-const LABELS = DRAFT_LIBRARY.flatMap((template) =>
-  [template.name, ...template.aliases].map((label) => ({ template, label: normalize(label) })),
-).sort((a, b) => b.label.length - a.label.length);
+const TEMPLATES_BY_LABEL = new Map(
+  DRAFT_LIBRARY.flatMap((template) =>
+    [template.name, ...template.aliases].map((label) => [normalize(label), template] as const),
+  ),
+);
 
 /**
- * 한 글자 이름(달, 해)과 영어 별칭(cat, star)은 "달팽이", "location"처럼
- * 다른 단어 안에 걸리지 않도록 띄어쓴 단어 단위로만 매칭
+ * 키워드가 도안 이름이나 별칭과 정확히 같을 때만 그 도안
+ * "웃는 고양이"처럼 다른 말이 붙으면 준비된 도안 대신 AI가 키워드대로 그림
  */
-const needsWholeWord = (label: string) => label.length === 1 || /^[a-z0-9 ]+$/.test(label);
+export const findDraftByKeyword = (keyword: string): DraftTemplate | null =>
+  TEMPLATES_BY_LABEL.get(normalize(keyword)) ?? null;
 
-/** 키워드에 도안 이름이나 별칭이 들어 있으면 그 도안 (예: "웃는 고양이" → 고양이) */
-export const findDraftByKeyword = (keyword: string): DraftTemplate | null => {
-  const text = normalize(keyword).replace(/\s+/g, " ");
-  const spaced = ` ${text} `;
-  const compact = text.replace(/ /g, "");
-
-  const match = LABELS.find(({ label }) =>
-    needsWholeWord(label) ? spaced.includes(` ${label} `) : compact.includes(label.replace(/ /g, "")),
-  );
-  return match?.template ?? null;
-};
-
-/** 16×16 도안을 캔버스 크기에 맞게 키워 픽셀로 변환 */
-export const templateToPixels = ({ palette, rows }: DraftTemplate, size: GridSize): Pixels => {
-  const scale = size / TEMPLATE_SIZE;
+/**
+ * 도안을 캔버스 크기의 픽셀로 변환
+ * 32×32 캔버스는 세밀하게 그린 rows32가 있으면 그대로 쓰고, 없으면 16×16 도안을 2배로 키움
+ */
+export const templateToPixels = ({ palette, rows, rows32 }: DraftTemplate, size: GridSize): Pixels => {
+  const source = size === GRID_SIZE.LARGE && rows32 ? rows32 : rows;
+  const scale = size / source.length;
 
   return Array.from({ length: size * size }, (_, index) => {
     const x = Math.floor((index % size) / scale);
     const y = Math.floor(Math.floor(index / size) / scale);
-    return palette[rows[y][x]] ?? null;
+    return palette[source[y][x]] ?? null;
   });
 };
