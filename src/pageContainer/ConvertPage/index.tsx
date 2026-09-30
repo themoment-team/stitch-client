@@ -20,8 +20,8 @@ interface ConvertPageProps {
 
 type ConvertStatus = "idle" | "loading" | "blocked" | "limit" | "error";
 
-const cardStyles = "flex w-full flex-col gap-3 rounded-3xl p-3 text-left sm:p-4";
-const cardShadow = "shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]";
+const cardStyles = "flex w-full min-w-0 flex-col gap-4 rounded-[1.75rem] border-2 p-4 text-left sm:p-5";
+const cardShadow = "shadow-[5px_5px_12px_var(--neu-dark),-5px_-5px_12px_var(--neu-light)]";
 
 interface ChoiceCardProps {
   title: string;
@@ -38,21 +38,20 @@ const ChoiceCard = ({ title, selected, disabled = false, onSelect, children }: C
     onClick={onSelect}
     disabled={disabled}
     aria-pressed={selected}
-    className={`${cardStyles} cursor-pointer transition-all duration-200 disabled:cursor-default ${
+    className={`${cardStyles} cursor-pointer transition-all duration-200 enabled:hover:-translate-y-1 disabled:cursor-default ${
       selected
-        ? "bg-accent shadow-[5px_5px_10px_var(--accent-dark),-5px_-5px_10px_var(--accent-light)]"
-        : `bg-background ${cardShadow}`
+        ? "border-accent bg-accent-tint shadow-[5px_5px_12px_var(--accent-dark),-5px_-5px_12px_var(--accent-light)]"
+        : `border-transparent bg-background ${cardShadow}`
     }`}
   >
     <span className="flex items-center justify-between gap-2 px-1">
       <span
-        className={`truncate text-sm ${selected ? "font-bold text-ink" : "font-semibold text-muted"}`}
+        className={`text-base ${selected ? "font-bold text-accent" : "font-semibold text-ink"}`}
       >
         {title}
       </span>
-      {/* 좁은 화면에서는 제목과 겹치지 않게 숨기고, 선택 상태는 배경색으로 구분 */}
       {selected && (
-        <span className="hidden shrink-0 text-xs font-semibold text-ink sm:inline">선택됨</span>
+        <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-sm font-bold text-white">선택됨</span>
       )}
     </span>
     {children}
@@ -111,31 +110,27 @@ const ConvertPage = ({
   };
 
   return (
-    <StepCard size="wide">
-      <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
-        <div className="justify-self-start">
+    <StepCard size="wide" className="desktop-fit-card desktop-fit-convert">
+      <header className="flex w-full flex-col gap-5 text-left">
+        <div className="flex w-full items-center justify-between gap-3">
           <StepButton variant="back" onClick={() => onBack({ results, choice })} disabled={isLoading}>
             이전
           </StepButton>
-        </div>
-        <div className="flex flex-col items-center gap-1">
           <StepLabel current={3} />
-          <h1 className="text-lg font-bold tracking-tight whitespace-nowrap text-ink max-[359px]:text-[0.9375rem] sm:text-2xl">
-            AI로 다듬으실 건가요?
-          </h1>
         </div>
-        <div />
+        <div>
+          <h1 className="page-heading">어떤 그림이 마음에 드세요?</h1>
+          <p className="mt-2 text-[15px] leading-relaxed text-muted">
+            {hasResult
+              ? "내 그림과 AI가 다듬은 그림을 비교하고 마음에 드는 걸 골라주세요."
+              : "원한다면 AI가 그림을 다듬어줘요. 내 그림 그대로 진행해도 좋아요."}
+          </p>
+        </div>
       </header>
 
-      <p className="text-sm font-medium text-muted sm:text-base">
-        {hasResult
-          ? "내 그림과 AI가 다듬은 그림을 비교하고 마음에 드는 걸 골라주세요."
-          : "원하면 AI가 내 그림을 더 깔끔하게 다듬어줘요."}
-      </p>
-
       <div
-        className={`grid w-full grid-cols-2 gap-4 sm:gap-6 ${
-          cardCount > 2 ? "max-w-4xl sm:grid-cols-3" : "max-w-3xl"
+        className={`choice-grid grid w-full grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 ${
+          cardCount > 2 ? "lg:grid-cols-3" : "max-w-4xl"
         }`}
       >
         <ChoiceCard title="내 그림" selected={choice === "original"} onSelect={() => setChoice("original")}>
@@ -156,16 +151,16 @@ const ConvertPage = ({
 
         {/* 아직 결과가 없거나 다듬는 중인 자리. 고를 수 없으므로 버튼이 아닌 카드로 표시 */}
         {showPendingCard && (
-          <div className={`${cardStyles} bg-background ${cardShadow}`}>
-            <span className="truncate px-1 text-sm font-semibold text-muted">
+          <div className={`${cardStyles} border-transparent bg-background ${cardShadow}`}>
+            <span className="px-1 text-base font-semibold text-muted">
               AI 다듬기 {results.length + 1}
             </span>
             <div
               role={isLoading ? "status" : undefined}
-              className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-2xl bg-white/60 text-subtle"
+              className="surface-inset flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-2xl text-muted"
             >
               <Icon name="sparkles" className={`size-8 ${isLoading ? "animate-pulse" : ""}`} />
-              <span className="px-2 text-center text-xs font-medium sm:text-sm">
+              <span className="px-2 text-center text-sm leading-relaxed font-medium">
                 {isLoading ? (
                   <>
                     AI가 다듬는 중이에요
@@ -204,26 +199,26 @@ const ConvertPage = ({
             </button>
           )}
         </div>
-        <span className="text-xs font-medium text-subtle">
+        <span className="text-sm font-medium text-muted">
           AI로 다듬기 {convertRemaining}/{AI_CONVERT_LIMIT}회 남음
         </span>
         {isEmptyDrawing && (
-          <p className="text-xs font-medium text-muted" role="status">
+          <p className="text-sm font-medium text-muted" role="status">
             그린 그림이 없어서 AI로 다듬을 수 없어요.
           </p>
         )}
         {status === "blocked" && (
-          <p className="text-xs font-medium text-danger" role="alert">
+          <p className="status-note" role="alert">
             이 그림은 AI로 다듬을 수 없어요. 내 그림 그대로 진행해주세요.
           </p>
         )}
         {status === "limit" && (
-          <p className="text-xs font-medium text-danger" role="alert">
+          <p className="status-note" role="alert">
             오늘 AI를 쓸 수 있는 횟수가 모두 찼어요. 내 그림 그대로 진행해주세요.
           </p>
         )}
         {status === "error" && (
-          <p className="text-xs font-medium text-danger" role="alert">
+          <p className="status-note" role="alert">
             다듬지 못했어요. 잠시 후 다시 시도하거나 그대로 진행해주세요.
           </p>
         )}

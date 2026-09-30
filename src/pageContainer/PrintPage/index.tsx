@@ -77,46 +77,52 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
 
   return (
     <>
-      <StepCard size="wide">
-        <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
-          <div className="justify-self-start">
+      <StepCard size="wide" className="desktop-fit-card desktop-fit-print">
+        <header className="flex w-full flex-col gap-5 text-left">
+          <div className="flex w-full items-center justify-between gap-3">
             <StepButton variant="back" onClick={onBack} disabled={status === "saving"}>
               이전
             </StepButton>
-          </div>
-          <div className="flex flex-col items-center gap-1">
             <StepLabel current={4} />
-            <h1 className="text-lg font-bold tracking-tight whitespace-nowrap text-ink max-[359px]:text-[0.9375rem] sm:text-2xl">
-              스티커가 완성됐어요
-            </h1>
           </div>
-          <div />
+          <div>
+            <h1 className="page-heading">스티커가 완성됐어요</h1>
+            <p className="mt-2 text-[15px] leading-relaxed text-muted">
+              그림을 인쇄하고, 함께 찍힌 QR 코드로 휴대폰에 저장하세요.
+            </p>
+          </div>
         </header>
 
-        <p className="text-sm font-medium text-muted sm:text-base">
-          인쇄물의 QR 코드를 찍으면 그림을 휴대폰에 저장할 수 있어요.
-        </p>
-
-        <div className="grid w-full max-w-3xl items-center gap-6 sm:grid-cols-[minmax(0,1fr)_14rem] sm:gap-8">
-          <div className="rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)] sm:p-4">
-            <PixelPreview drawing={drawing} label="완성한 그림" />
+        <div className="print-grid grid w-full max-w-4xl items-stretch gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,0.75fr)]">
+          <div className="surface-inset flex flex-col gap-4 rounded-[2rem] p-5 sm:p-7">
+            <p className="section-label text-left">완성한 그림</p>
+            <div className="print-preview mx-auto w-full max-w-80 overflow-hidden rounded-2xl bg-white">
+              <PixelPreview drawing={drawing} label="완성한 그림" />
+            </div>
           </div>
 
-          <div className="mx-auto flex w-full max-w-56 flex-col items-center gap-3">
-            <div className="flex aspect-square w-full items-center justify-center rounded-3xl bg-white p-3 shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)]">
+          <div className="surface-inset flex w-full flex-col items-center justify-center gap-4 rounded-[2rem] p-5 sm:p-7">
+            <p className="section-label self-start">내 그림을 가져가는 QR</p>
+            <div className="flex aspect-square w-full max-w-56 items-center justify-center rounded-2xl bg-white p-4">
               {qrCode ? (
                 // eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 data URL이라 최적화 대상이 아님
                 <img src={qrCode} alt="그림 다운로드 QR 코드" className="size-full [image-rendering:pixelated]" />
               ) : (
                 <span
                   role={status === "saving" ? "status" : undefined}
-                  className="px-2 text-center text-xs font-medium text-subtle sm:text-sm"
+                  className="px-2 text-center text-sm leading-relaxed font-medium text-muted"
                 >
-                  {status === "saving" ? "QR 코드를 만드는 중이에요" : "QR 코드를 만들지 못했어요"}
+                  {status === "saving"
+                    ? "그림을 저장하는 중이에요"
+                    : status === "limit"
+                      ? "오늘의 저장 한도에 도달했어요"
+                      : "QR 코드를 만들지 못했어요"}
                 </span>
               )}
             </div>
-            <span className="text-xs font-medium text-subtle">다운로드 QR 코드</span>
+            <span className="text-sm font-medium text-muted">
+              {qrCode ? "카메라로 찍어 이미지를 저장하세요" : "저장되면 QR 코드가 나타나요"}
+            </span>
           </div>
         </div>
 
@@ -142,12 +148,12 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
             </button>
           </div>
           {status === "error" && (
-            <p className="text-xs font-medium text-danger" role="alert">
+            <p className="status-note" role="alert">
               그림을 저장하지 못했어요. 다시 시도해주세요.
             </p>
           )}
           {status === "limit" && (
-            <p className="text-xs font-medium text-danger" role="alert">
+            <p className="status-note" role="alert">
               오늘 저장할 수 있는 횟수가 모두 찼어요. 내일 다시 이용해주세요.
             </p>
           )}
