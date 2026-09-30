@@ -40,18 +40,18 @@ const ChoiceCard = ({ title, selected, disabled = false, onSelect, children }: C
     aria-pressed={selected}
     className={`${cardStyles} cursor-pointer transition-all duration-200 enabled:hover:-translate-y-1 disabled:cursor-default ${
       selected
-        ? "border-accent bg-accent-tint shadow-[5px_5px_12px_var(--accent-dark),-5px_-5px_12px_var(--accent-light)]"
+        ? "border-accent-ink bg-accent-tint shadow-[5px_5px_12px_var(--accent-dark),-5px_-5px_12px_var(--accent-light)]"
         : `border-transparent bg-background ${cardShadow}`
     }`}
   >
     <span className="flex items-center justify-between gap-2 px-1">
       <span
-        className={`text-base ${selected ? "font-bold text-accent" : "font-semibold text-ink"}`}
+        className={`text-base ${selected ? "font-bold text-accent-ink" : "font-semibold text-ink"}`}
       >
         {title}
       </span>
       {selected && (
-        <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-sm font-bold text-white">선택됨</span>
+        <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-sm font-bold text-ink">선택됨</span>
       )}
     </span>
     {children}

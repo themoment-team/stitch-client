@@ -9,9 +9,9 @@
 ## Color
 - Ground `#edf0f4`; raised surface `#edf0f4`; inset well `#e9edf2`; paper/canvas `#ffffff`.
 - Ink `#222936`, muted `#526073`, subtle `#5d6a7e`; hairline `#c7d0db`.
-- Primary coral `#b83e59` with white text; tint `#f8e9ed` for selection. Mint `#dcefe9` only as a supporting progress/accent note. Danger `#b42337` on pale rose.
-- Surface shadows use cool light `#ffffff` and cool dark `#cbd2dc`; coral shadows use `#ffffff` and `#e4b9c4`.
-- Proportion: mostly neutral ground and paper, restrained coral on one primary action/selected control per block. Maintain WCAG AA text contrast; never use pale accent text on pale surfaces.
+- Primary pastel pink `#f3bfd7` (close to the requested `#ffd1e4`) with dark ink `#222936` on filled buttons, badges, and progress. Use the requested `#ffd1e4` as the selection tint; mint `#dcefe9` remains a supporting completed-step note. Danger `#b42337` stays distinct.
+- Use deep rose `#80506e` for accent text, selected borders, and focus outlines: the pale pink alone cannot carry legible text. Surface shadows use cool light `#ffffff` and cool dark `#cbd2dc`; pink shadows use `#ffffff` and `#e2b4c9`, with pressed depth `#c58aa7`.
+- Proportion: mostly neutral ground and paper, restrained pastel pink on one primary action/selected control per block. White-on-pink is not used; ink on `#f3bfd7` and deep rose on `#ffd1e4` both maintain WCAG AA text contrast.
 
 ## Typography
 - Pretendard, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif throughout. No new font dependency.
@@ -24,8 +24,8 @@
 - At 375px, 768px, and 1440px: no horizontal overflow. On desktop widths of at least 1024px and heights of at least 768px, the normal four-step flow should fit without document scrolling by scaling the canvas and preview to available height. Shorter windows, expanded AI/status content, zoom, and narrow/mobile screens may scroll naturally; never hide overflowing actions. Footer action stays in normal flow, not over content. Print layout retains A4-only `.print-target` behavior.
 
 ## Components & states
-- `StepCard`: soft raised main surface with thin top edge; narrow/wide variants. `StepLabel`: numbered 4-step rail with current, previous, upcoming semantics. `StepButton`, `ToolButton`, and standard action classes: default raised, hover lighter/lifted, focus-visible solid coral outline, active inset, disabled dim/no shadow. Loading labels stay stable; errors use text plus role=alert, not color alone.
-- Editor controls are grouped by purpose (canvas size, tools, colors, AI guide). Canvas/preview and QR sit in inset paper wells. Empty AI result gets a visible placeholder; selected comparison gets coral border and text plus aria-pressed.
+- `StepCard`: soft raised main surface with thin top edge; narrow/wide variants. `StepLabel`: numbered 4-step rail with current, previous, upcoming semantics. `StepButton`, `ToolButton`, and standard action classes: default raised, hover lighter/lifted, focus-visible solid pink outline, active inset, disabled dim/no shadow. Loading labels stay stable; errors use text plus role=alert, not color alone.
+- Editor controls are grouped by purpose (canvas size, tools, colors, AI guide). Canvas/preview and QR sit in inset paper wells. Empty AI result gets a visible placeholder; selected comparison gets pink border and text plus aria-pressed.
 - Preserve input values and user artwork when requests fail. The missing-link/404 route uses the same card and offers a clear return-home action; it does not imply a missing drawing can be recovered. All existing user-facing actions keep labels and behavior.
 
 ## Motion & interaction

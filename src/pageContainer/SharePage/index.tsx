@@ -55,7 +55,7 @@ const SharePage = ({ drawing }: SharePageProps) => {
   return (
     <StepCard className="desktop-fit-share">
       <div className="flex flex-col items-center gap-3">
-        <span className="text-sm font-bold tracking-[0.2em] text-accent uppercase">Made with Stitch</span>
+        <span className="text-sm font-bold tracking-[0.2em] text-accent-ink uppercase">Made with Stitch</span>
         <h1 className="page-heading">세상에 하나뿐인 내 스티커</h1>
         <p className="text-[15px] leading-relaxed text-muted">이미지를 저장해 언제든 다시 꺼내 보세요.</p>
       </div>

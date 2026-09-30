@@ -13,7 +13,7 @@ const StepLabel = ({ current }: StepLabelProps) => {
           aria-hidden="true"
           className={`grid size-7 place-items-center rounded-full text-xs font-bold tabular-nums transition-colors sm:size-8 ${
             index + 1 === current
-              ? "bg-accent text-white shadow-[3px_3px_8px_var(--accent-dark)]"
+              ? "bg-accent text-ink shadow-[3px_3px_8px_var(--accent-dark)]"
               : index + 1 < current
                 ? "bg-mint text-ink"
                 : "surface-inset text-muted"

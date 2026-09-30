@@ -6,7 +6,7 @@ export default function NotFound() {
   return (
     <div className="page-shell flex flex-1 items-center justify-center px-4 py-8 sm:px-8 sm:py-12">
       <StepCard>
-        <div className="surface-inset grid size-24 place-items-center rounded-[2rem] text-3xl font-black tabular-nums text-accent" aria-hidden="true">
+        <div className="surface-inset grid size-24 place-items-center rounded-[2rem] text-3xl font-black tabular-nums text-accent-ink" aria-hidden="true">
           404
         </div>
         <div className="space-y-3">

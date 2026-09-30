@@ -11,7 +11,7 @@ interface ToolButtonProps {
 
 const ToolButton = ({ label, onClick, icon, active, disabled = false }: ToolButtonProps) => {
   const stateStyles = active
-    ? "bg-accent-tint font-bold text-accent ring-2 ring-accent shadow-[inset_3px_3px_7px_var(--accent-dark),inset_-3px_-3px_7px_white]"
+    ? "bg-accent-tint font-bold text-accent-ink ring-2 ring-accent-ink shadow-[inset_3px_3px_7px_var(--accent-dark),inset_-3px_-3px_7px_white]"
     : "bg-background font-semibold text-muted shadow-[4px_4px_10px_var(--neu-dark),-4px_-4px_10px_var(--neu-light)] enabled:hover:text-ink enabled:hover:-translate-y-0.5 enabled:active:translate-y-0 enabled:active:shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)]";
 
   return (
