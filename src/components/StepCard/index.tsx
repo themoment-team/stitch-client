@@ -1,17 +1,18 @@
 interface StepCardProps {
   children: React.ReactNode;
   size?: "default" | "wide";
+  className?: string;
 }
 
-const StepCard = ({ children, size = "default" }: StepCardProps) => {
+const StepCard = ({ children, size = "default", className = "" }: StepCardProps) => {
   const sizeStyles = {
-    default: "h-160 max-h-[85dvh] max-w-lg justify-between px-10 py-14 sm:px-12 sm:py-16",
-    wide: "max-w-5xl gap-8 px-6 py-8 sm:px-10 sm:py-10",
+    default: "max-w-3xl gap-8 px-6 py-8 sm:gap-10 sm:px-12 sm:py-12",
+    wide: "max-w-6xl gap-8 px-5 py-7 sm:gap-10 sm:px-10 sm:py-10 lg:px-12",
   };
 
   return (
     <div
-      className={`flex w-full flex-col items-center rounded-4xl bg-background text-center shadow-[12px_12px_24px_var(--neu-dark),-12px_-12px_24px_var(--neu-light)] ${sizeStyles[size]}`}
+      className={`surface-raised flex w-full flex-col items-center rounded-[2rem] border border-white/70 text-center sm:rounded-[2.5rem] ${sizeStyles[size]} ${className}`}
     >
       {children}
     </div>

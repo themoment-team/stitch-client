@@ -6,12 +6,23 @@ interface StepLabelProps {
 
 const StepLabel = ({ current }: StepLabelProps) => {
   return (
-    <span
-      className="text-[0.6875rem] font-bold tracking-[0.3em] text-subtle uppercase sm:text-xs"
-      aria-label={`${TOTAL_STEPS}단계 중 ${current}단계`}
-    >
-      Step <span className="text-ink">{current}</span> / {TOTAL_STEPS}
-    </span>
+    <div className="flex items-center gap-2" role="img" aria-label={`${TOTAL_STEPS}단계 중 ${current}단계`}>
+      {Array.from({ length: TOTAL_STEPS }, (_, index) => (
+        <span
+          key={index}
+          aria-hidden="true"
+          className={`grid size-7 place-items-center rounded-full text-xs font-bold tabular-nums transition-colors sm:size-8 ${
+            index + 1 === current
+              ? "bg-accent text-white shadow-[3px_3px_8px_var(--accent-dark)]"
+              : index + 1 < current
+                ? "bg-mint text-ink"
+                : "surface-inset text-muted"
+          }`}
+        >
+          {index + 1}
+        </span>
+      ))}
+    </div>
   );
 };
 

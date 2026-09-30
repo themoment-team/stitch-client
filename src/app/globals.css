@@ -2,18 +2,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8f8f8;
-  --foreground: #222222;
-  --ink: #222222;
-  --muted: #666666;
-  --subtle: #888888;
-  --hairline: #e5e5e5;
-  --danger: #ff0002;
+  --background: #edf0f4;
+  --foreground: #222936;
+  --ink: #222936;
+  --muted: #526073;
+  --subtle: #5d6a7e;
+  --hairline: #c7d0db;
+  --danger: #b42337;
   --neu-light: #ffffff;
-  --neu-dark: #d1d1d6;
-  --accent: #f6e9ec;
+  --neu-dark: #cbd2dc;
+  --accent: #b83e59;
+  --accent-tint: #f8e9ed;
   --accent-light: #ffffff;
-  --accent-dark: #d8c2c8;
+  --accent-dark: #e4b9c4;
+  --mint: #dcefe9;
 }
 
 @theme inline {
@@ -25,6 +27,8 @@
   --color-hairline: var(--hairline);
   --color-danger: var(--danger);
   --color-accent: var(--accent);
+  --color-accent-tint: var(--accent-tint);
+  --color-mint: var(--mint);
   --font-sans:
     "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
@@ -33,6 +37,142 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  word-break: keep-all;
+}
+
+button, input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.surface-raised {
+  background: var(--background);
+  box-shadow: 7px 7px 18px var(--neu-dark), -7px -7px 18px var(--neu-light);
+}
+
+.surface-inset {
+  background: #e9edf2;
+  box-shadow: inset 5px 5px 12px var(--neu-dark), inset -5px -5px 12px var(--neu-light);
+}
+
+.section-label {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.page-heading {
+  color: var(--ink);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.25;
+}
+
+.status-note {
+  border-radius: 1rem;
+  background: var(--accent-tint);
+  color: var(--danger);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+/* 데스크톱의 일반 작업 흐름은 창 높이에 맞추되, 작은 창이나 긴 상태 메시지는 문서가 스크롤되게 둠. */
+@media (min-width: 1024px) and (min-height: 768px) {
+  .site-header {
+    padding-top: 1rem;
+  }
+
+  .page-shell {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .desktop-fit-card {
+    gap: 1.25rem;
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .desktop-fit-draw > header,
+  .desktop-fit-convert > header,
+  .desktop-fit-print > header {
+    gap: 0.75rem;
+  }
+
+  .desktop-fit-draw {
+    gap: 1rem;
+  }
+
+  .desktop-fit-draw > header p {
+    margin-top: 0.25rem;
+  }
+
+  .desktop-fit-draw > .grid {
+    gap: 1.25rem;
+  }
+
+  .desktop-fit-draw .canvas-well {
+    max-width: min(36rem, calc(100dvh - 27rem));
+    padding: 1rem;
+  }
+
+  .desktop-fit-draw aside {
+    gap: 0.5rem;
+  }
+
+  .desktop-fit-draw aside fieldset,
+  .desktop-fit-draw aside form {
+    gap: 0.5rem;
+  }
+
+  .desktop-fit-draw aside legend {
+    margin-bottom: 0.25rem;
+  }
+
+  .desktop-fit-draw aside form {
+    padding-top: 0.5rem;
+  }
+
+  .desktop-fit-draw aside .tool-button {
+    min-height: 3rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .desktop-fit-convert .choice-grid {
+    max-width: min(56rem, calc(200dvh - 53.5rem));
+  }
+
+  .desktop-fit-print .print-preview {
+    max-width: min(20rem, calc(100dvh - 30rem));
+  }
+
+  .desktop-fit-share {
+    gap: 1rem;
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .desktop-fit-share .share-preview {
+    max-width: min(24rem, calc(100dvh - 28rem));
+    padding: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* 출력 단계에서 라벨지 인쇄물(.print-target)만 A4 한 장에 찍히도록 나머지 화면을 숨김 */

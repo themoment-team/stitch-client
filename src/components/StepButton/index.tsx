@@ -8,20 +8,20 @@ interface StepButtonProps {
 }
 
 const StepButton = ({ variant, onClick, children, disabled = false }: StepButtonProps) => {
-  const baseStyles = "font-medium transition-all duration-300 ease-out";
+  const baseStyles = "min-h-11 font-semibold transition-all duration-200 ease-out";
 
   const variantStyles = {
-    back: "flex items-center gap-1 rounded-full bg-background py-2 pr-4 pl-2.5 text-sm font-semibold whitespace-nowrap text-muted max-[359px]:px-2 sm:text-base",
-    next: "rounded-2xl bg-accent px-6 py-3 text-base font-semibold text-ink sm:px-8 sm:py-4 sm:text-lg",
+    back: "flex items-center gap-1 rounded-full bg-background px-4 py-2 text-sm whitespace-nowrap text-muted max-[359px]:px-3 sm:text-base",
+    next: "rounded-2xl bg-accent px-8 py-3 text-base text-white sm:px-10 sm:py-4 sm:text-lg",
   };
 
   const stateStyles = {
     back: disabled
       ? "opacity-40 shadow-none"
-      : "shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)] hover:text-ink active:shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)]",
+      : "shadow-[4px_4px_10px_var(--neu-dark),-4px_-4px_10px_var(--neu-light)] hover:text-ink active:shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)]",
     next: disabled
       ? "opacity-40 shadow-none"
-      : "shadow-[6px_6px_14px_var(--accent-dark),-6px_-6px_14px_var(--accent-light)] hover:shadow-[3px_3px_8px_var(--accent-dark),-3px_-3px_8px_var(--accent-light)] active:shadow-[inset_4px_4px_10px_var(--accent-dark),inset_-4px_-4px_10px_var(--accent-light)]",
+      : "shadow-[5px_5px_12px_var(--accent-dark),-5px_-5px_12px_var(--accent-light)] hover:-translate-y-0.5 hover:shadow-[7px_7px_14px_var(--accent-dark),-7px_-7px_14px_var(--accent-light)] active:translate-y-0 active:shadow-[inset_4px_4px_10px_#8c2e46]",
   };
 
   const cursorStyle = disabled ? "cursor-not-allowed" : "cursor-pointer";
