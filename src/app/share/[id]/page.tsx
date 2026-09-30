@@ -14,7 +14,7 @@ export default async function Share({ params }: PageProps<"/share/[id]">) {
   if (!drawing) notFound();
 
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
+    <div className="page-shell flex flex-1 items-center justify-center px-4 py-8 sm:px-8 sm:py-12">
       <SharePage drawing={drawing} />
     </div>
   );

@@ -53,13 +53,14 @@ const SharePage = ({ drawing }: SharePageProps) => {
   };
 
   return (
-    <StepCard>
+    <StepCard className="desktop-fit-share">
       <div className="flex flex-col items-center gap-3">
-        <span className="text-xs font-bold tracking-[0.3em] text-subtle uppercase">Stitch</span>
-        <h1 className="text-2xl font-bold tracking-tight text-ink">내가 만든 스티커</h1>
+        <span className="text-sm font-bold tracking-[0.2em] text-accent uppercase">Made with Stitch</span>
+        <h1 className="page-heading">세상에 하나뿐인 내 스티커</h1>
+        <p className="text-[15px] leading-relaxed text-muted">이미지를 저장해 언제든 다시 꺼내 보세요.</p>
       </div>
 
-      <div className="w-full max-w-72 rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]">
+      <div className="share-preview surface-inset w-full max-w-sm rounded-[2rem] p-4 sm:p-6">
         {/* eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 data URL이라 최적화 대상이 아님 */}
         <img
           ref={imageRef}
@@ -73,7 +74,7 @@ const SharePage = ({ drawing }: SharePageProps) => {
           <Icon name="download" className="size-4" />
           이미지 저장하기
         </button>
-        <p className="text-xs font-medium text-subtle">저장이 안 되면 그림을 길게 눌러 저장해주세요.</p>
+        <p className="text-sm leading-relaxed font-medium text-muted">저장이 안 되면 그림을 길게 눌러 저장해주세요.</p>
       </div>
     </StepCard>
   );
