@@ -15,8 +15,18 @@ const OUTPUT_OPTIONS = {
   output_compression: 60,
 };
 
+/** 100만 토큰당 가격(USD), gpt-image-2.5-flare 기준이라 모델을 바꾸면 추정 비용도 맞지 않음 */
+const PRICE_PER_MILLION = { text: 5, image: 8, output: 30 };
+
+interface ImageUsage {
+  input_tokens: number;
+  output_tokens: number;
+  input_tokens_details?: { text_tokens?: number; image_tokens?: number };
+}
+
 interface ImageResponse {
   data: { b64_json: string }[];
+  usage?: ImageUsage;
 }
 
 interface OpenAIErrorResponse {
@@ -67,7 +77,8 @@ export const requestOpenAIImage = async (
       return Response.json({ message: "이미지를 만들지 못했습니다." }, { status: 502 });
     }
 
-    const { data }: ImageResponse = await response.json();
+    const { data, usage }: ImageResponse = await response.json();
+    if (usage) logUsage(endpoint, usage);
     return Response.json({ image: `data:image/webp;base64,${data[0].b64_json}` });
   } catch (error) {
     console.error(error);
@@ -75,7 +86,22 @@ export const requestOpenAIImage = async (
   }
 };
 
-const toFormData = (fields: Record<string, string | number>, image?: Blob) => {
+// 요청마다 비용이 들쭉날쭉해서 입력(텍스트·이미지)과 출력 중 어디서 토큰이 늘어나는지 확인하려고 남김
+const logUsage = (endpoint: string, { input_tokens, output_tokens, input_tokens_details }: ImageUsage) => {
+  const textTokens = input_tokens_details?.text_tokens ?? input_tokens;
+  const imageTokens = input_tokens_details?.image_tokens ?? 0;
+  const cost =
+    (textTokens * PRICE_PER_MILLION.text +
+      imageTokens * PRICE_PER_MILLION.image +
+      output_tokens * PRICE_PER_MILLION.output) /
+    1_000_000;
+
+  console.info(
+    `OpenAI image ${endpoint} usage: text ${textTokens}, image ${imageTokens}, output ${output_tokens} tokens (~$${cost.toFixed(4)})`,
+  );
+};
+
+const toFormData =(fields: Record<string, string | number>, image?: Blob) => {
   const form = new FormData();
   Object.entries(fields).forEach(([key, value]) => form.append(key, String(value)));
   if (image) form.append("image", image, "drawing.png");
