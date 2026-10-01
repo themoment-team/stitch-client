@@ -1,4 +1,4 @@
-export const DRAW_TIME_LIMIT = 120;
+export const DRAW_TIME_LIMIT = 180;
 
 export const HISTORY_LIMIT = 50;
 
