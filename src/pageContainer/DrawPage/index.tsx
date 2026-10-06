@@ -6,11 +6,17 @@ import {
   PixelCanvas,
   StepButton,
   StepCard,
-  StepLabel,
+  StepHeader,
   Timer,
   ToolButton,
 } from "@/components";
-import { AI_DRAFT_LIMIT, DRAFT_KEYWORD_MAX_LENGTH, PALETTE } from "@/constants";
+import {
+  AI_DRAFT_LIMIT,
+  DRAFT_KEYWORD_MAX_LENGTH,
+  PALETTE,
+  SMALL_PRIMARY_BUTTON_STYLES,
+  SMALL_SECONDARY_BUTTON_STYLES,
+} from "@/constants";
 import { useCountdown, useDrawingHistory } from "@/hooks";
 import { DRAW_TOOL, type Drawing, type DrawTool, GRID_SIZE } from "@/types";
 import { createEmptyPixels, isEmptyPixels } from "@/utils";
@@ -35,9 +41,6 @@ const EMPTY_DRAWING: Drawing = {
 };
 
 type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "dailyLimit" | "error";
-
-const guideButtonStyles =
-  "cursor-pointer rounded-full bg-background px-3 py-1.5 text-xs font-semibold text-muted shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] transition-all duration-200 hover:text-ink active:shadow-[inset_2px_2px_4px_var(--neu-dark),inset_-2px_-2px_4px_var(--neu-light)]";
 
 const DrawPage = ({
   endAt,
@@ -112,24 +115,15 @@ const DrawPage = ({
 
   return (
     <StepCard size="wide">
-      <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
-        <div className="justify-self-start">
-          <StepButton variant="back" onClick={() => onBack(drawing, guide)} disabled={!canGoBack}>
-            이전
-          </StepButton>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <StepLabel current={2} />
-          <h1 className="text-lg font-bold tracking-tight whitespace-nowrap text-ink max-[359px]:text-[0.9375rem] sm:text-2xl">
-            자유롭게 그려보세요
-          </h1>
-        </div>
-        <div className="justify-self-end">
-          <Timer remaining={remaining} />
-        </div>
-      </header>
+      <StepHeader
+        current={1}
+        title="자유롭게 그려보세요"
+        onBack={() => onBack(drawing, guide)}
+        backDisabled={!canGoBack}
+        aside={<Timer remaining={remaining} />}
+      />
 
-      <div className="grid w-full items-start gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <section className="flex flex-col items-center gap-3">
           <div className="w-full max-w-[min(34rem,60dvh)] rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]">
             <PixelCanvas
@@ -148,7 +142,82 @@ const DrawPage = ({
           )}
         </section>
 
-        <aside className="mx-auto flex w-full max-w-[34rem] flex-col gap-7 text-left">
+        <aside className="mx-auto flex w-full max-w-[34rem] flex-col gap-6 text-left">
+          <form className="flex flex-col gap-3" onSubmit={handleGenerateDraft}>
+            <div className="flex items-center justify-between">
+              <label htmlFor="draft-keyword" className="text-sm font-semibold text-muted">
+                AI 도안
+              </label>
+              <span className="text-xs font-medium text-subtle">
+                AI 생성 {aiDraftRemaining}/{AI_DRAFT_LIMIT}회 남음
+              </span>
+            </div>
+            <div className="flex gap-3">
+              <input
+                id="draft-keyword"
+                type="text"
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                placeholder="예) 웃는 고양이"
+                maxLength={DRAFT_KEYWORD_MAX_LENGTH}
+                disabled={isLocked || isDraftLoading}
+                className="min-w-0 flex-1 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-ink shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] outline-none placeholder:font-normal placeholder:text-subtle focus-visible:ring-2 focus-visible:ring-(--accent-dark) disabled:opacity-40"
+              />
+              <button
+                type="submit"
+                disabled={isLocked || isDraftLoading || !keyword.trim()}
+                className={`${SMALL_PRIMARY_BUTTON_STYLES} shrink-0`}
+              >
+                <Icon name="sparkles" className="size-4" />
+                {isDraftLoading ? "그리는 중" : "생성"}
+              </button>
+            </div>
+            {isDraftLoading && (
+              <p className="text-xs font-medium text-muted" role="status">
+                AI가 도안을 그리고 있어요. 10~15초 정도 걸리고, 완성되면 캔버스에 연하게 깔려요.
+              </p>
+            )}
+            {guide && (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsGuideVisible((prev) => !prev)}
+                  className={SMALL_SECONDARY_BUTTON_STYLES}
+                >
+                  {isGuideVisible ? "도안 숨기기" : "도안 보이기"}
+                </button>
+                <button type="button" onClick={() => setGuide(null)} className={SMALL_SECONDARY_BUTTON_STYLES}>
+                  도안 지우기
+                </button>
+                {guide.size !== drawing.size && (
+                  <span className="text-xs text-subtle">
+                    도안은 {guide.size}×{guide.size} 캔버스에서 보여요
+                  </span>
+                )}
+              </div>
+            )}
+            {draftStatus === "blocked" && (
+              <p className="text-xs font-medium text-danger" role="alert">
+                이 키워드로는 도안을 만들 수 없어요. 다른 키워드를 입력해주세요.
+              </p>
+            )}
+            {draftStatus === "limit" && (
+              <p className="text-xs font-medium text-danger" role="alert">
+                AI 생성은 {AI_DRAFT_LIMIT}번까지 할 수 있어요. 고양이, 하트처럼 준비된 도안은 계속 쓸 수 있어요.
+              </p>
+            )}
+            {draftStatus === "dailyLimit" && (
+              <p className="text-xs font-medium text-danger" role="alert">
+                오늘 AI를 쓸 수 있는 횟수가 모두 찼어요. 고양이, 하트처럼 준비된 도안은 계속 쓸 수 있어요.
+              </p>
+            )}
+            {draftStatus === "error" && (
+              <p className="text-xs font-medium text-danger" role="alert">
+                도안을 불러오지 못했어요. 잠시 후 다시 시도해주세요.
+              </p>
+            )}
+          </form>
+
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-3 text-sm font-semibold text-muted">캔버스 크기</legend>
             <div className="grid grid-cols-2 gap-3">
@@ -190,81 +259,6 @@ const DrawPage = ({
             <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
             <ColorPalette value={color} onChange={handleColorChange} disabled={isLocked} />
           </fieldset>
-
-          <form className="flex flex-col gap-3" onSubmit={handleGenerateDraft}>
-            <div className="flex items-center justify-between">
-              <label htmlFor="draft-keyword" className="text-sm font-semibold text-muted">
-                AI 도안
-              </label>
-              <span className="text-xs font-medium text-subtle">
-                AI 생성 {aiDraftRemaining}/{AI_DRAFT_LIMIT}회 남음
-              </span>
-            </div>
-            <div className="flex gap-3">
-              <input
-                id="draft-keyword"
-                type="text"
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-                placeholder="예) 웃는 고양이"
-                maxLength={DRAFT_KEYWORD_MAX_LENGTH}
-                disabled={isLocked || isDraftLoading}
-                className="min-w-0 flex-1 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-ink shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)] outline-none placeholder:font-normal placeholder:text-subtle focus-visible:ring-2 focus-visible:ring-(--accent-dark) disabled:opacity-40"
-              />
-              <button
-                type="submit"
-                disabled={isLocked || isDraftLoading || !keyword.trim()}
-                className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-2xl bg-accent px-4 text-sm font-semibold text-ink shadow-[5px_5px_10px_var(--accent-dark),-5px_-5px_10px_var(--accent-light)] transition-all duration-200 enabled:active:shadow-[inset_3px_3px_6px_var(--accent-dark),inset_-3px_-3px_6px_var(--accent-light)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-              >
-                <Icon name="sparkles" className="size-4" />
-                {isDraftLoading ? "그리는 중" : "생성"}
-              </button>
-            </div>
-            {isDraftLoading && (
-              <p className="text-xs font-medium text-muted" role="status">
-                AI가 도안을 그리고 있어요. 10~15초 정도 걸리고, 완성되면 캔버스에 연하게 깔려요.
-              </p>
-            )}
-            {guide && (
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsGuideVisible((prev) => !prev)}
-                  className={guideButtonStyles}
-                >
-                  {isGuideVisible ? "도안 숨기기" : "도안 보이기"}
-                </button>
-                <button type="button" onClick={() => setGuide(null)} className={guideButtonStyles}>
-                  도안 지우기
-                </button>
-                {guide.size !== drawing.size && (
-                  <span className="text-xs text-subtle">
-                    도안은 {guide.size}×{guide.size} 캔버스에서 보여요
-                  </span>
-                )}
-              </div>
-            )}
-            {draftStatus === "blocked" && (
-              <p className="text-xs font-medium text-danger" role="alert">
-                이 키워드로는 도안을 만들 수 없어요. 다른 키워드를 입력해주세요.
-              </p>
-            )}
-            {draftStatus === "limit" && (
-              <p className="text-xs font-medium text-danger" role="alert">
-                AI 생성은 {AI_DRAFT_LIMIT}번까지 할 수 있어요. 고양이, 하트처럼 준비된 도안은 계속 쓸 수 있어요.
-              </p>
-            )}
-            {draftStatus === "dailyLimit" && (
-              <p className="text-xs font-medium text-danger" role="alert">
-                오늘 AI를 쓸 수 있는 횟수가 모두 찼어요. 고양이, 하트처럼 준비된 도안은 계속 쓸 수 있어요.
-              </p>
-            )}
-            {draftStatus === "error" && (
-              <p className="text-xs font-medium text-danger" role="alert">
-                도안을 불러오지 못했어요. 잠시 후 다시 시도해주세요.
-              </p>
-            )}
-          </form>
         </aside>
       </div>
 

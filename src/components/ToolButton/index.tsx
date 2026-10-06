@@ -17,7 +17,7 @@ const ToolButton = ({ label, onClick, icon, active, disabled = false }: ToolButt
   return (
     <button
       type="button"
-      className={`flex flex-col items-center justify-center gap-1.5 cursor-pointer rounded-2xl py-3 text-[0.8125rem] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${stateStyles}`}
+      className={`flex flex-col items-center justify-center gap-1.5 cursor-pointer rounded-2xl py-3 text-[0.8125rem] transition-all duration-200 enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${stateStyles}`}
       onClick={onClick}
       disabled={disabled}
       aria-pressed={active}

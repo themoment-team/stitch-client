@@ -17,7 +17,7 @@ const ColorPalette = ({ value, onChange, disabled = false }: ColorPaletteProps) 
         <button
           key={color}
           type="button"
-          className={`aspect-square w-full max-w-10 cursor-pointer rounded-full border border-black/5 shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] transition-transform duration-200 hover:scale-110 ${value === color ? selectedStyles : ""}`}
+          className={`aspect-square w-full max-w-10 cursor-pointer rounded-full border border-black/5 shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] transition-transform duration-200 hover:scale-110 active:scale-90 ${value === color ? selectedStyles : ""}`}
           style={{ backgroundColor: color }}
           onClick={() => onChange(color)}
           disabled={disabled}
@@ -27,7 +27,7 @@ const ColorPalette = ({ value, onChange, disabled = false }: ColorPaletteProps) 
       ))}
 
       <label
-        className={`relative aspect-square w-full max-w-10 cursor-pointer overflow-hidden rounded-full shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] transition-transform duration-200 hover:scale-110 ${isCustom ? selectedStyles : ""}`}
+        className={`relative aspect-square w-full max-w-10 cursor-pointer overflow-hidden rounded-full shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] transition-transform duration-200 hover:scale-110 active:scale-90 ${isCustom ? selectedStyles : ""}`}
         style={{
           background: isCustom
             ? value
