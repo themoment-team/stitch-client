@@ -10,7 +10,13 @@ import {
   Timer,
   ToolButton,
 } from "@/components";
-import { AI_DRAFT_LIMIT, DRAFT_KEYWORD_MAX_LENGTH, PALETTE } from "@/constants";
+import {
+  AI_DRAFT_LIMIT,
+  DRAFT_KEYWORD_MAX_LENGTH,
+  PALETTE,
+  SMALL_PRIMARY_BUTTON_STYLES,
+  SMALL_SECONDARY_BUTTON_STYLES,
+} from "@/constants";
 import { useCountdown, useDrawingHistory } from "@/hooks";
 import { DRAW_TOOL, type Drawing, type DrawTool, GRID_SIZE } from "@/types";
 import { createEmptyPixels, isEmptyPixels } from "@/utils";
@@ -35,9 +41,6 @@ const EMPTY_DRAWING: Drawing = {
 };
 
 type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "dailyLimit" | "error";
-
-const guideButtonStyles =
-  "cursor-pointer rounded-full bg-background px-3 py-1.5 text-xs font-semibold text-muted shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] transition-all duration-200 hover:text-ink active:shadow-[inset_2px_2px_4px_var(--neu-dark),inset_-2px_-2px_4px_var(--neu-light)]";
 
 const DrawPage = ({
   endAt,
@@ -214,7 +217,7 @@ const DrawPage = ({
               <button
                 type="submit"
                 disabled={isLocked || isDraftLoading || !keyword.trim()}
-                className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-2xl bg-accent px-4 text-sm font-semibold text-ink shadow-[5px_5px_10px_var(--accent-dark),-5px_-5px_10px_var(--accent-light)] transition-all duration-200 enabled:active:shadow-[inset_3px_3px_6px_var(--accent-dark),inset_-3px_-3px_6px_var(--accent-light)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                className={`${SMALL_PRIMARY_BUTTON_STYLES} shrink-0`}
               >
                 <Icon name="sparkles" className="size-4" />
                 {isDraftLoading ? "그리는 중" : "생성"}
@@ -230,11 +233,11 @@ const DrawPage = ({
                 <button
                   type="button"
                   onClick={() => setIsGuideVisible((prev) => !prev)}
-                  className={guideButtonStyles}
+                  className={SMALL_SECONDARY_BUTTON_STYLES}
                 >
                   {isGuideVisible ? "도안 숨기기" : "도안 보이기"}
                 </button>
-                <button type="button" onClick={() => setGuide(null)} className={guideButtonStyles}>
+                <button type="button" onClick={() => setGuide(null)} className={SMALL_SECONDARY_BUTTON_STYLES}>
                   도안 지우기
                 </button>
                 {guide.size !== drawing.size && (
