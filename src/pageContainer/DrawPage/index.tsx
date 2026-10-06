@@ -143,48 +143,6 @@ const DrawPage = ({
         </section>
 
         <aside className="mx-auto flex w-full max-w-[34rem] flex-col gap-6 text-left">
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">캔버스 크기</legend>
-            <div className="grid grid-cols-2 gap-3">
-              {Object.values(GRID_SIZE).map((size) => (
-                <ToolButton
-                  key={size}
-                  label={`${size} × ${size}`}
-                  onClick={() => resize(size)}
-                  active={drawing.size === size}
-                  disabled={isLocked || isDraftLoading}
-                />
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">도구</legend>
-            <div className="grid grid-cols-4 gap-3">
-              <ToolButton
-                label="펜"
-                icon="pen"
-                onClick={() => setTool(DRAW_TOOL.PEN)}
-                active={tool === DRAW_TOOL.PEN}
-                disabled={isLocked}
-              />
-              <ToolButton
-                label="지우개"
-                icon="eraser"
-                onClick={() => setTool(DRAW_TOOL.ERASER)}
-                active={tool === DRAW_TOOL.ERASER}
-                disabled={isLocked}
-              />
-              <ToolButton label="되돌리기" icon="undo" onClick={undo} disabled={isLocked || !canUndo} />
-              <ToolButton label="초기화" icon="reset" onClick={reset} disabled={isLocked || isEmpty} />
-            </div>
-          </fieldset>
-
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
-            <ColorPalette value={color} onChange={handleColorChange} disabled={isLocked} />
-          </fieldset>
-
           <form className="flex flex-col gap-3" onSubmit={handleGenerateDraft}>
             <div className="flex items-center justify-between">
               <label htmlFor="draft-keyword" className="text-sm font-semibold text-muted">
@@ -203,7 +161,7 @@ const DrawPage = ({
                 placeholder="예) 웃는 고양이"
                 maxLength={DRAFT_KEYWORD_MAX_LENGTH}
                 disabled={isLocked || isDraftLoading}
-                className="min-w-0 flex-1 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-ink shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)] outline-none placeholder:font-normal placeholder:text-subtle focus-visible:ring-2 focus-visible:ring-(--accent-dark) disabled:opacity-40"
+                className="min-w-0 flex-1 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-ink shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] outline-none placeholder:font-normal placeholder:text-subtle focus-visible:ring-2 focus-visible:ring-(--accent-dark) disabled:opacity-40"
               />
               <button
                 type="submit"
@@ -259,6 +217,48 @@ const DrawPage = ({
               </p>
             )}
           </form>
+
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-3 text-sm font-semibold text-muted">캔버스 크기</legend>
+            <div className="grid grid-cols-2 gap-3">
+              {Object.values(GRID_SIZE).map((size) => (
+                <ToolButton
+                  key={size}
+                  label={`${size} × ${size}`}
+                  onClick={() => resize(size)}
+                  active={drawing.size === size}
+                  disabled={isLocked || isDraftLoading}
+                />
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-3 text-sm font-semibold text-muted">도구</legend>
+            <div className="grid grid-cols-4 gap-3">
+              <ToolButton
+                label="펜"
+                icon="pen"
+                onClick={() => setTool(DRAW_TOOL.PEN)}
+                active={tool === DRAW_TOOL.PEN}
+                disabled={isLocked}
+              />
+              <ToolButton
+                label="지우개"
+                icon="eraser"
+                onClick={() => setTool(DRAW_TOOL.ERASER)}
+                active={tool === DRAW_TOOL.ERASER}
+                disabled={isLocked}
+              />
+              <ToolButton label="되돌리기" icon="undo" onClick={undo} disabled={isLocked || !canUndo} />
+              <ToolButton label="초기화" icon="reset" onClick={reset} disabled={isLocked || isEmpty} />
+            </div>
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
+            <ColorPalette value={color} onChange={handleColorChange} disabled={isLocked} />
+          </fieldset>
         </aside>
       </div>
 
