@@ -48,7 +48,7 @@ const DrawPage = ({
   onBack,
   onNext,
 }: DrawPageProps) => {
-  const { drawing, canUndo, startStroke, paint, endStroke, undo, reset, resize } =
+  const { drawing, canUndo, startStroke, paint, endStroke, fill, undo, reset, resize } =
     useDrawingHistory(initialDrawing ?? EMPTY_DRAWING);
   const { remaining, isOver } = useCountdown(endAt);
   const [tool, setTool] = useState<DrawTool>(DRAW_TOOL.PEN);
@@ -76,9 +76,14 @@ const DrawPage = ({
     paint(indices, tool === DRAW_TOOL.PEN ? color : null);
   };
 
+  const handleFill = (index: number) => {
+    fill(index, color);
+  };
+
   const handleColorChange = (nextColor: string) => {
     setColor(nextColor);
-    setTool(DRAW_TOOL.PEN);
+    // 채우기 중에는 도구를 유지하고, 지우개일 때만 펜으로 바꿈
+    if (tool === DRAW_TOOL.ERASER) setTool(DRAW_TOOL.PEN);
   };
 
   const handleGenerateDraft = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -139,6 +144,7 @@ const DrawPage = ({
               onStrokeStart={startStroke}
               onPaint={handlePaint}
               onStrokeEnd={endStroke}
+              onFill={tool === DRAW_TOOL.FILL ? handleFill : undefined}
             />
           </div>
           {isOver && (
@@ -166,7 +172,7 @@ const DrawPage = ({
 
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-3 text-sm font-semibold text-muted">도구</legend>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <ToolButton
                 label="펜"
                 icon="pen"
@@ -181,6 +187,15 @@ const DrawPage = ({
                 active={tool === DRAW_TOOL.ERASER}
                 disabled={isLocked}
               />
+              <ToolButton
+                label="채우기"
+                icon="fill"
+                onClick={() => setTool(DRAW_TOOL.FILL)}
+                active={tool === DRAW_TOOL.FILL}
+                disabled={isLocked}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <ToolButton label="되돌리기" icon="undo" onClick={undo} disabled={isLocked || !canUndo} />
               <ToolButton label="초기화" icon="reset" onClick={reset} disabled={isLocked || isEmpty} />
             </div>
