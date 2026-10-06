@@ -17,7 +17,8 @@ interface PrintPageProps {
   onRestart: () => void;
 }
 
-type SaveStatus = "saving" | "saved" | "limit" | "error";
+/** 저장 실패와 QR 생성 실패를 나눠야 다시 시도할 때 이미 저장된 그림을 또 저장하지 않음 */
+type SaveStatus = "saving" | "saved" | "limit" | "saveError" | "qrError";
 
 const QR_OPTIONS = { margin: 1, width: 512 };
 
@@ -38,6 +39,16 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
   // 인쇄물에는 캔버스 대신 이미지로 넣어야 브라우저마다 픽셀이 번지지 않고 그대로 찍힘
   const drawingImage = useMemo(() => drawingToPngDataUrl(drawing), [drawing]);
 
+  const createQRCode = (drawingId: string) => {
+    const shareUrl = `${SITE_URL || window.location.origin}/share/${drawingId}`;
+    QRCode.toDataURL(shareUrl, QR_OPTIONS)
+      .then((dataUrl) => {
+        setQRCode(dataUrl);
+        setStatus("saved");
+      })
+      .catch(() => setStatus("qrError"));
+  };
+
   const save = () => {
     if (isSavingRef.current) return;
 
@@ -48,13 +59,18 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
         onSaved(newId);
         setStatus("saved");
       })
-      .catch((error) => setStatus(error instanceof RateLimitError ? "limit" : "error"))
+      .catch((error) => setStatus(error instanceof RateLimitError ? "limit" : "saveError"))
       .finally(() => {
         isSavingRef.current = false;
       });
   };
 
   const handleRetry = () => {
+    // 이미 저장된 그림이면 저장은 건너뛰고 같은 id로 QR만 다시 만듦. id가 그대로라 아래 effect는 다시 돌지 않으므로 직접 호출
+    if (id) {
+      createQRCode(id);
+      return;
+    }
     setStatus("saving");
     save();
   };
@@ -66,14 +82,12 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
   }, []);
 
   useEffect(() => {
-    if (!id) return;
-    const shareUrl = `${SITE_URL || window.location.origin}/share/${id}`;
-    QRCode.toDataURL(shareUrl, QR_OPTIONS)
-      .then(setQRCode)
-      .catch(() => setStatus("error"));
+    // 저장으로 id가 정해지면 QR을 만듦
+    if (id) createQRCode(id);
   }, [id]);
 
   const canPrint = status === "saved" && qrCode !== null;
+  const canRetry = status === "saveError" || status === "qrError";
 
   return (
     <>
@@ -126,7 +140,7 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
               <Icon name="printer" className="size-4" />
               인쇄하기
             </button>
-            {status === "error" && (
+            {canRetry && (
               <button type="button" onClick={handleRetry} className={SECONDARY_BUTTON_STYLES}>
                 <Icon name="reset" className="size-4" />
                 다시 시도
@@ -141,9 +155,14 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
               처음으로
             </button>
           </div>
-          {status === "error" && (
+          {status === "saveError" && (
             <p className="text-xs font-medium text-danger" role="alert">
               그림을 저장하지 못했어요. 다시 시도해주세요.
+            </p>
+          )}
+          {status === "qrError" && (
+            <p className="text-xs font-medium text-danger" role="alert">
+              QR 코드를 만들지 못했어요. 다시 시도해주세요.
             </p>
           )}
           {status === "limit" && (
