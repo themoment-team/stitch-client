@@ -123,7 +123,7 @@ const DrawPage = ({
         aside={<Timer remaining={remaining} />}
       />
 
-      <div className="grid w-full items-start gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <section className="flex flex-col items-center gap-3">
           <div className="w-full max-w-[min(34rem,60dvh)] rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]">
             <PixelCanvas
@@ -142,7 +142,7 @@ const DrawPage = ({
           )}
         </section>
 
-        <aside className="mx-auto flex w-full max-w-[34rem] flex-col gap-7 text-left">
+        <aside className="mx-auto flex w-full max-w-[34rem] flex-col gap-6 text-left">
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-3 text-sm font-semibold text-muted">캔버스 크기</legend>
             <div className="grid grid-cols-2 gap-3">
