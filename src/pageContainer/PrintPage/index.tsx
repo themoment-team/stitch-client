@@ -1,7 +1,7 @@
 import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RateLimitError, saveDrawing } from "@/apis";
-import { Icon, LabelSheet, PixelPreview, StepButton, StepCard, StepLabel } from "@/components";
+import { Icon, LabelSheet, PixelPreview, StepCard, StepHeader } from "@/components";
 import { PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
 import type { Drawing } from "@/types";
 import { drawingToPngDataUrl } from "@/utils";
@@ -78,24 +78,13 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
   return (
     <>
       <StepCard size="wide">
-        <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
-          <div className="justify-self-start">
-            <StepButton variant="back" onClick={onBack} disabled={status === "saving"}>
-              이전
-            </StepButton>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <StepLabel current={4} />
-            <h1 className="text-lg font-bold tracking-tight whitespace-nowrap text-ink max-[359px]:text-[0.9375rem] sm:text-2xl">
-              스티커가 완성됐어요
-            </h1>
-          </div>
-          <div />
-        </header>
-
-        <p className="text-sm font-medium text-muted sm:text-base">
-          인쇄물의 QR 코드를 찍으면 그림을 휴대폰에 저장할 수 있어요.
-        </p>
+        <StepHeader
+          current={3}
+          title="스티커가 완성됐어요"
+          description="인쇄물의 QR 코드를 찍으면 그림을 휴대폰에 저장할 수 있어요."
+          onBack={onBack}
+          backDisabled={status === "saving"}
+        />
 
         <div className="grid w-full max-w-3xl items-center gap-6 sm:grid-cols-[minmax(0,1fr)_14rem] sm:gap-8">
           <div className="rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)] sm:p-4">

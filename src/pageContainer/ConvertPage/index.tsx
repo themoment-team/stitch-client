@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { AIBlockedError, convertDrawing, RateLimitError } from "@/apis";
-import { Icon, PixelPreview, StepButton, StepCard, StepLabel } from "@/components";
+import { Icon, PixelPreview, StepButton, StepCard, StepHeader } from "@/components";
 import { AI_CONVERT_LIMIT, PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
 import type { ConvertChoice, ConvertSnapshot, Drawing, Pixels } from "@/types";
 import { isEmptyPixels } from "@/utils";
@@ -112,26 +112,17 @@ const ConvertPage = ({
 
   return (
     <StepCard size="wide">
-      <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
-        <div className="justify-self-start">
-          <StepButton variant="back" onClick={() => onBack({ results, choice })} disabled={isLoading}>
-            이전
-          </StepButton>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <StepLabel current={3} />
-          <h1 className="text-lg font-bold tracking-tight whitespace-nowrap text-ink max-[359px]:text-[0.9375rem] sm:text-2xl">
-            AI로 다듬으실 건가요?
-          </h1>
-        </div>
-        <div />
-      </header>
-
-      <p className="text-sm font-medium text-muted sm:text-base">
-        {hasResult
-          ? "내 그림과 AI가 다듬은 그림을 비교하고 마음에 드는 걸 골라주세요."
-          : "원하면 AI가 내 그림을 더 깔끔하게 다듬어줘요."}
-      </p>
+      <StepHeader
+        current={2}
+        title="AI로 다듬으실 건가요?"
+        description={
+          hasResult
+            ? "내 그림과 AI가 다듬은 그림을 비교하고 마음에 드는 걸 골라주세요."
+            : "원하면 AI가 내 그림을 더 깔끔하게 다듬어줘요."
+        }
+        onBack={() => onBack({ results, choice })}
+        backDisabled={isLoading}
+      />
 
       <div
         className={`grid w-full grid-cols-2 gap-4 sm:gap-6 ${

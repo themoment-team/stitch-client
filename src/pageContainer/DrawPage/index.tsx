@@ -6,7 +6,7 @@ import {
   PixelCanvas,
   StepButton,
   StepCard,
-  StepLabel,
+  StepHeader,
   Timer,
   ToolButton,
 } from "@/components";
@@ -115,22 +115,13 @@ const DrawPage = ({
 
   return (
     <StepCard size="wide">
-      <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
-        <div className="justify-self-start">
-          <StepButton variant="back" onClick={() => onBack(drawing, guide)} disabled={!canGoBack}>
-            이전
-          </StepButton>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <StepLabel current={2} />
-          <h1 className="text-lg font-bold tracking-tight whitespace-nowrap text-ink max-[359px]:text-[0.9375rem] sm:text-2xl">
-            자유롭게 그려보세요
-          </h1>
-        </div>
-        <div className="justify-self-end">
-          <Timer remaining={remaining} />
-        </div>
-      </header>
+      <StepHeader
+        current={1}
+        title="자유롭게 그려보세요"
+        onBack={() => onBack(drawing, guide)}
+        backDisabled={!canGoBack}
+        aside={<Timer remaining={remaining} />}
+      />
 
       <div className="grid w-full items-start gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <section className="flex flex-col items-center gap-3">
