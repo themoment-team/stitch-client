@@ -21,6 +21,9 @@ type SaveStatus = "saving" | "saved" | "limit" | "error";
 
 const QR_OPTIONS = { margin: 1, width: 512 };
 
+const cardStyles =
+  "flex w-full flex-col gap-3 rounded-3xl bg-background p-3 text-left shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)] sm:p-4";
+
 /**
  * QR에 넣을 사이트 주소. 없거나 빈 값이면 지금 접속한 주소를 씀
  * localhost로 띄운 PC에서 인쇄하면 폰이 열 수 없는 주소가 되므로, 로컬 테스트 때는 PC의 IP 주소를 넣음
@@ -86,13 +89,16 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
           backDisabled={status === "saving"}
         />
 
-        <div className="grid w-full max-w-3xl items-center gap-6 sm:grid-cols-[minmax(0,1fr)_14rem] sm:gap-8">
-          <div className="rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)] sm:p-4">
+        {/* 3단계 비교 카드와 같은 크기·모양으로 그림과 QR 코드를 나란히 보여줌 */}
+        <div className="grid w-full max-w-3xl grid-cols-2 gap-4 sm:gap-6">
+          <div className={cardStyles}>
+            <span className="truncate px-1 text-sm font-semibold text-muted">완성한 그림</span>
             <PixelPreview drawing={drawing} label="완성한 그림" />
           </div>
 
-          <div className="mx-auto flex w-full max-w-56 flex-col items-center gap-3">
-            <div className="flex aspect-square w-full items-center justify-center rounded-3xl bg-white p-3 shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)]">
+          <div className={cardStyles}>
+            <span className="truncate px-1 text-sm font-semibold text-muted">다운로드 QR 코드</span>
+            <div className="flex aspect-square w-full items-center justify-center rounded-2xl bg-white p-3 sm:p-5">
               {qrCode ? (
                 // eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 data URL이라 최적화 대상이 아님
                 <img src={qrCode} alt="그림 다운로드 QR 코드" className="size-full [image-rendering:pixelated]" />
@@ -105,7 +111,6 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
                 </span>
               )}
             </div>
-            <span className="text-xs font-medium text-subtle">다운로드 QR 코드</span>
           </div>
         </div>
 
