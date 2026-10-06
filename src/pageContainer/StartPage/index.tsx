@@ -11,10 +11,10 @@ const StartPage = ({ onStart }: StartPageProps) => {
       <div className="flex flex-col items-center gap-5">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-background shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)] sm:h-20 sm:w-20">
           <div className="grid grid-cols-2 gap-1.5">
-            <span className="size-3 rounded-[3px] bg-(--accent-dark) sm:size-3.5" />
+            <span className="size-3 rounded-[3px] bg-(--accent-dark) motion-safe:animate-pixel-blink sm:size-3.5" />
             <span className="size-3 rounded-[3px] bg-ink/10 sm:size-3.5" />
             <span className="size-3 rounded-[3px] bg-ink/10 sm:size-3.5" />
-            <span className="size-3 rounded-[3px] bg-(--accent-dark) sm:size-3.5" />
+            <span className="size-3 rounded-[3px] bg-(--accent-dark) motion-safe:animate-pixel-blink motion-safe:[animation-delay:1.2s] sm:size-3.5" />
           </div>
         </div>
 

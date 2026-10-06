@@ -1,5 +1,5 @@
 const BUTTON_BASE_STYLES =
-  "flex cursor-pointer items-center justify-center gap-1.5 rounded-2xl font-semibold whitespace-nowrap transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40";
+  "flex cursor-pointer items-center justify-center gap-1.5 rounded-2xl font-semibold whitespace-nowrap transition-all duration-200 enabled:hover:-translate-y-0.5 enabled:active:translate-y-0 enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40";
 
 const PRIMARY_COLOR_STYLES =
   "bg-accent text-ink shadow-[5px_5px_10px_var(--accent-dark),-5px_-5px_10px_var(--accent-light)] enabled:active:shadow-[inset_3px_3px_6px_var(--accent-dark),inset_-3px_-3px_6px_var(--accent-light)] disabled:shadow-none";

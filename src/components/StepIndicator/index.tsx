@@ -17,14 +17,23 @@ const StepIndicator = ({ current }: StepIndicatorProps) => {
         return (
           <li key={title} className="flex items-center gap-2 sm:gap-3" aria-current={isCurrent ? "step" : undefined}>
             {index > 0 && (
-              <span
-                aria-hidden
-                className={`h-0.5 w-6 rounded-full sm:w-14 ${isPassed ? "bg-ink/30" : "bg-ink/10"}`}
-              />
+              <span aria-hidden className="relative h-0.5 w-6 overflow-hidden rounded-full bg-ink/10 sm:w-14">
+                {isPassed && (
+                  <span
+                    className={`absolute inset-0 origin-left bg-ink/40 ${
+                      isCurrent ? "motion-safe:animate-line-fill" : ""
+                    }`}
+                  />
+                )}
+              </span>
             )}
             <span
               className={`flex size-7 shrink-0 items-center justify-center rounded-lg border-2 text-sm font-bold sm:size-8 sm:text-base ${
-                isCurrent ? "border-ink text-ink" : "border-ink/15 text-subtle"
+                isCurrent
+                  ? "border-ink bg-ink text-background"
+                  : isPassed
+                    ? "border-ink/40 text-muted"
+                    : "border-ink/15 text-subtle"
               }`}
             >
               {step}

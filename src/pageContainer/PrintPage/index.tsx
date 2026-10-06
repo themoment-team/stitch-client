@@ -101,7 +101,11 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
             <div className="flex aspect-square w-full items-center justify-center rounded-2xl bg-white p-3 sm:p-5">
               {qrCode ? (
                 // eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 data URL이라 최적화 대상이 아님
-                <img src={qrCode} alt="그림 다운로드 QR 코드" className="size-full [image-rendering:pixelated]" />
+                <img
+                  src={qrCode}
+                  alt="그림 다운로드 QR 코드"
+                  className="size-full [image-rendering:pixelated] motion-safe:animate-pop"
+                />
               ) : (
                 <span
                   role={status === "saving" ? "status" : undefined}
