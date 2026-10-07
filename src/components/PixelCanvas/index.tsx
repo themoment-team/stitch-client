@@ -10,6 +10,8 @@ interface PixelCanvasProps {
   onStrokeStart: () => void;
   onPaint: (indices: number[]) => void;
   onStrokeEnd: () => void;
+  /** 지정하면 획 대신 누른 칸에서 채우기만 함 */
+  onFill?: (index: number) => void;
 }
 
 const DEFAULT_RESOLUTION = 640;
@@ -23,6 +25,7 @@ const PixelCanvas = ({
   onStrokeStart,
   onPaint,
   onStrokeEnd,
+  onFill,
 }: PixelCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // 그리는 중인 포인터. 펜슬로 그리는 중 손바닥 터치 같은 다른 입력은 무시
@@ -98,6 +101,11 @@ const PixelCanvas = ({
     const cell = getCell(event);
     if (disabled || !cell || activePointerIdRef.current !== null) return;
 
+    if (onFill) {
+      onFill(toIndex(cell));
+      return;
+    }
+
     event.currentTarget.setPointerCapture(event.pointerId);
     activePointerIdRef.current = event.pointerId;
     lastCellRef.current = cell;
@@ -131,7 +139,7 @@ const PixelCanvas = ({
       ref={canvasRef}
       width={resolution}
       height={resolution}
-      className={`aspect-square w-full touch-none rounded-2xl bg-white select-none [-webkit-touch-callout:none] ${disabled ? "cursor-not-allowed" : "cursor-crosshair"}`}
+      className={`aspect-square w-full touch-none rounded-2xl bg-white select-none [-webkit-touch-callout:none] ${disabled ? "cursor-not-allowed" : onFill ? "cursor-cell" : "cursor-crosshair"}`}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}

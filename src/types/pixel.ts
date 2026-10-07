@@ -8,6 +8,7 @@ export type GridSize = (typeof GRID_SIZE)[keyof typeof GRID_SIZE];
 export const DRAW_TOOL = {
   PEN: "PEN",
   ERASER: "ERASER",
+  FILL: "FILL",
 } as const;
 
 export type DrawTool = (typeof DRAW_TOOL)[keyof typeof DRAW_TOOL];
