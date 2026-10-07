@@ -18,13 +18,16 @@ const getSecret = () => {
 
 const sign = (payload: string) => createHmac("sha256", getSecret()).update(payload).digest("base64url");
 
-/** 새 세션을 만들어 쿠키에 담음. 이전 세션 쿠키가 있으면 덮어써서 횟수를 새로 셈 */
-export const startAISession = async () => {
+/**
+ * 새 세션을 만들어 쿠키에 담음. 이전 세션 쿠키가 있으면 덮어써서 횟수를 새로 셈
+ * Secure는 https로 들어온 요청에만 붙임. 로컬에서 next start를 http LAN IP로 띄워 폰으로 테스트할 때도 쿠키가 저장되게 함
+ */
+export const startAISession = async (request: Request) => {
   const payload = `${randomUUID()}.${Date.now()}`;
   (await cookies()).set(COOKIE_NAME, `${payload}.${sign(payload)}`, {
     httpOnly: true,
     sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    secure: new URL(request.url).protocol === "https:",
     path: "/api",
     maxAge: MAX_AGE_SECONDS,
   });

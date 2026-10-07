@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { startSession } from "@/apis";
 import { AI_CONVERT_LIMIT, AI_DRAFT_LIMIT, DRAW_TIME_LIMIT } from "@/constants";
 import { ConvertPage, DrawPage, PrintPage, StartPage } from "@/pageContainer";
@@ -29,15 +29,19 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   const [saved, setSaved] = useState<{ pixels: Pixels; id: string } | null>(null);
 
   const [isStarting, setIsStarting] = useState(false);
+  // 화면이 다시 그려지기 전에 시작하기를 연달아 눌러도 세션을 한 번만 받도록 막음
+  const isStartingRef = useRef(false);
 
   const handleStart = async () => {
     // 처음 시작할 때만 서버에서 새 세션을 받아 AI 횟수를 새로 셈
     // 그리기에서 이전으로 왔다가 다시 시작하면 같은 세션을 이어 써서 횟수가 초기화되지 않음
     if (drawEndAt === null) {
-      if (isStarting) return;
+      if (isStartingRef.current) return;
+      isStartingRef.current = true;
       setIsStarting(true);
-      // 세션을 받지 못해도 그리기는 할 수 있게 진행하고, AI 요청만 실패로 안내
+      // 세션을 받지 못해도 그리기는 할 수 있게 진행하고, AI 요청 때 세션을 다시 받음
       await startSession().catch((error) => console.error(error));
+      isStartingRef.current = false;
       setIsStarting(false);
     }
     setDrawEndAt((prev) => prev ?? Date.now() + DRAW_TIME_LIMIT * 1000);

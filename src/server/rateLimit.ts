@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
-import { AI_CONVERT_LIMIT, AI_DRAFT_LIMIT, RATE_LIMIT, type RateLimitScope } from "@/constants";
+import {
+  AI_CONVERT_LIMIT,
+  AI_DRAFT_LIMIT,
+  AI_TRUSTED_IP_LIMIT,
+  RATE_LIMIT,
+  type RateLimitScope,
+} from "@/constants";
 import { getAISessionId } from "./aiSession";
 import { getSupabase } from "./supabase";
 
@@ -52,18 +58,32 @@ type AIQuotaResult = "ok" | "session" | "ip" | "total";
 
 const getSessionKey = (kind: AIRequestKind, sessionId: string) => `${sessionId}:${kind}`;
 
+/** 부스처럼 여러 이용자가 함께 쓰는 공인 IP 목록 (환경변수 AI_TRUSTED_IPS, 쉼표로 구분) */
+const getTrustedIPs = () =>
+  new Set(
+    (process.env.AI_TRUSTED_IPS ?? "")
+      .split(",")
+      .map((ip) => ip.trim())
+      .filter(Boolean),
+  );
+
+/** 등록한 부스 IP면 높은 한도, 아니면 기본 IP별 한도 */
+const getAIIPLimit = (ip: string) =>
+  getTrustedIPs().has(ip) ? AI_TRUSTED_IP_LIMIT : RATE_LIMIT.ai.perIP;
+
 /** 세션별·IP별·전체 한도를 한 번에 확인하고, 모두 남아 있을 때만 1회씩 차감 */
 const consumeAIQuota = async (
   kind: AIRequestKind,
   sessionId: string,
   request: Request,
 ): Promise<AIQuotaResult | null> => {
+  const ip = getClientIP(request);
   try {
     const { data, error } = await getSupabase().rpc("consume_ai_quota", {
       p_session_key: getSessionKey(kind, sessionId),
       p_session_limit: AI_SESSION_LIMIT[kind],
-      p_ip_key: hashIP(getClientIP(request)),
-      p_ip_limit: RATE_LIMIT.ai.perIP,
+      p_ip_key: hashIP(ip),
+      p_ip_limit: getAIIPLimit(ip),
       p_total_limit: RATE_LIMIT.ai.total,
     });
     if (error) throw error;
@@ -79,10 +99,15 @@ const consumeAIQuota = async (
  * IP별·전체 횟수는 실패한 요청을 반복해 부하를 주지 못하도록 되돌리지 않음
  */
 const refundAISessionQuota = async (kind: AIRequestKind, sessionId: string) => {
-  const { error } = await getSupabase().rpc("refund_ai_session_quota", {
-    p_session_key: getSessionKey(kind, sessionId),
-  });
-  if (error) console.error("AI 세션 횟수를 되돌리지 못했습니다.", error);
+  // 되돌리기에 실패해도 원래 실패 응답(422·502)이 그대로 나가야 화면이 알맞은 안내를 보여줌
+  try {
+    const { error } = await getSupabase().rpc("refund_ai_session_quota", {
+      p_session_key: getSessionKey(kind, sessionId),
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.error("AI 세션 횟수를 되돌리지 못했습니다.", error);
+  }
 };
 
 /**
