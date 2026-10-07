@@ -1,10 +1,15 @@
 import { consumeQuota, tooManyRequests } from "@/server/rateLimit";
 import { GRID_SIZE, type GridSize } from "@/types";
 import { isGridSize, requestOpenAIImage } from "../_lib/openaiImage";
+import { payloadTooLarge, readJsonBody } from "../_lib/readJsonBody";
 
 const PNG_DATA_URL_PREFIX = "data:image/png;base64,";
 /** 512px로 키운 픽셀 그림은 수십 KB라 넉넉히 잡아도 1MB면 충분 */
 const MAX_IMAGE_BYTES = 1024 * 1024;
+/** MAX_IMAGE_BYTES를 base64로 바꾼 길이. 디코딩하기 전에 문자열 길이로 먼저 거름 */
+const MAX_BASE64_LENGTH = Math.ceil(MAX_IMAGE_BYTES / 3) * 4;
+/** 이미지(data URL)와 캔버스 크기를 담은 JSON 본문의 최대 크기 */
+const MAX_BODY_BYTES = PNG_DATA_URL_PREFIX.length + MAX_BASE64_LENGTH + 1024;
 
 /** AI 결과 이미지 한 변의 길이(openaiImage의 size와 같음), 한 칸이 몇 px인지 알려줄 때 사용 */
 const OUTPUT_IMAGE_SIZE = 1024;
@@ -30,7 +35,9 @@ const buildPrompt = (size: GridSize) =>
 - The grid fills the whole image with no margin: each pixel is a ${OUTPUT_IMAGE_SIZE / size}px square block of one flat color. No anti-aliasing or gradients. Transparent background, no shadow.`;
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
+  const parsed = await readJsonBody(request, MAX_BODY_BYTES);
+  if ("error" in parsed) return parsed.error;
+  const body = parsed.body as { image?: unknown; size?: unknown } | null;
   const image = typeof body?.image === "string" ? body.image : "";
   const size = body?.size;
 
@@ -41,7 +48,10 @@ export async function POST(request: Request) {
     return Response.json({ message: "캔버스 크기가 올바르지 않습니다." }, { status: 400 });
   }
 
-  const buffer = Buffer.from(image.slice(PNG_DATA_URL_PREFIX.length), "base64");
+  const base64 = image.slice(PNG_DATA_URL_PREFIX.length);
+  if (base64.length > MAX_BASE64_LENGTH) return payloadTooLarge();
+
+  const buffer = Buffer.from(base64, "base64");
   if (buffer.byteLength === 0 || buffer.byteLength > MAX_IMAGE_BYTES) {
     return Response.json({ message: "그림 이미지가 너무 큽니다." }, { status: 413 });
   }

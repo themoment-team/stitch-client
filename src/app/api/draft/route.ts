@@ -2,6 +2,10 @@ import { DRAFT_KEYWORD_MAX_LENGTH } from "@/constants";
 import { consumeQuota, tooManyRequests } from "@/server/rateLimit";
 import { GRID_SIZE, type GridSize } from "@/types";
 import { isGridSize, requestOpenAIImage } from "../_lib/openaiImage";
+import { readJsonBody } from "../_lib/readJsonBody";
+
+/** 키워드 50자를 모두 \u 이스케이프로 보내도(약 300바이트) 남는 크기 */
+const MAX_BODY_BYTES = 2 * 1024;
 
 // 키워드가 한국어라 영어 뜻으로 오해하지 않도록 안내 (예: "치킨"을 살아 있는 닭으로 그림)
 const KOREAN_NOTE = `The subject is written in Korean; interpret it the way a Korean speaker would (e.g. "치킨" means fried chicken).`;
@@ -23,7 +27,9 @@ ${KOREAN_NOTE}`,
 };
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
+  const parsed = await readJsonBody(request, MAX_BODY_BYTES);
+  if ("error" in parsed) return parsed.error;
+  const body = parsed.body as { keyword?: unknown; size?: unknown } | null;
   const keyword = typeof body?.keyword === "string" ? body.keyword.trim() : "";
   const size = body?.size;
 
