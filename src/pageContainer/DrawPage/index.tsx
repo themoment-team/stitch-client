@@ -70,9 +70,10 @@ const DrawPage = ({
   const isDraftLoading = draftStatus === "loading";
   // 도안은 만든 캔버스 크기에서만 보여줌 (크기를 바꿨다 되돌리면 다시 보임)
   const visibleGuide = isGuideVisible && guide?.size === drawing.size ? guide.pixels : null;
+  // AI 도안을 기다리는 중에 화면을 떠나면 결과가 버려지고 횟수만 차감되므로 이전·다음 모두 잠금
+  // 요청은 서버 타임아웃이 있어 반드시 끝나므로, 시간이 끝난 뒤에도 완료될 때까지 기다림
   // 시간이 끝나면 이전으로 돌아가 다시 그릴 수 없고, 빈 그림이어도 다음으로만 진행
-  const canGoNext = isOver || !isEmpty;
-  // AI 도안을 기다리는 중에 이전으로 가면 결과가 버려지고 횟수만 차감되므로 이전도 잠금
+  const canGoNext = !isDraftLoading && (isOver || !isEmpty);
   const canGoBack = !isOver && !isDraftLoading;
 
   const handlePaint = (indices: number[]) => {
@@ -143,7 +144,9 @@ const DrawPage = ({
           </div>
           {isOver && (
             <p className="text-sm font-medium text-danger" role="status">
-              시간이 끝났어요. 다음 단계로 넘어가주세요.
+              {isDraftLoading
+                ? "시간이 끝났어요. AI 도안이 완성되면 다음 단계로 넘어갈 수 있어요."
+                : "시간이 끝났어요. 다음 단계로 넘어가주세요."}
             </p>
           )}
         </section>
