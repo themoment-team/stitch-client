@@ -62,6 +62,69 @@ $$;
 -- 서버의 service role 키로만 호출할 수 있도록 공개 키에서는 실행 권한을 뺌
 revoke execute on function public.consume_api_quota(text, text, integer, integer) from public, anon, authenticated;
 
+-- AI 이미지 요청 한도. 세션별(이용자 한 명의 도안·변환 횟수), IP별, 전체 한도를 함께 확인하고
+-- 모두 남아 있을 때만 1회씩 차감. 어느 한도에 걸렸는지 돌려줌 ('ok' | 'session' | 'ip' | 'total')
+-- 세션 횟수는 scope 'ai_session'(key: 세션 id:도안·변환 구분), IP별·전체 횟수는 scope 'ai'에 기록
+create or replace function public.consume_ai_quota(
+  p_session_key text,
+  p_session_limit integer,
+  p_ip_key text,
+  p_ip_limit integer,
+  p_total_limit integer
+) returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  today date := (now() at time zone 'Asia/Seoul')::date;
+begin
+  insert into api_usage (scope, key, day, count) values ('ai_session', p_session_key, today, 1)
+  on conflict (scope, key, day) do update set count = api_usage.count + 1
+  where api_usage.count < p_session_limit;
+  if not found then
+    return 'session';
+  end if;
+
+  insert into api_usage (scope, key, day, count) values ('ai', p_ip_key, today, 1)
+  on conflict (scope, key, day) do update set count = api_usage.count + 1
+  where api_usage.count < p_ip_limit;
+  if not found then
+    -- IP별 한도가 찼으면 앞에서 올린 세션 횟수를 되돌림
+    update api_usage set count = count - 1 where scope = 'ai_session' and key = p_session_key and day = today;
+    return 'ip';
+  end if;
+
+  insert into api_usage (scope, key, day, count) values ('ai', '*', today, 1)
+  on conflict (scope, key, day) do update set count = api_usage.count + 1
+  where api_usage.count < p_total_limit;
+  if not found then
+    -- 전체 한도가 찼으면 앞에서 올린 세션·IP별 횟수를 되돌림
+    update api_usage set count = count - 1 where scope = 'ai_session' and key = p_session_key and day = today;
+    update api_usage set count = count - 1 where scope = 'ai' and key = p_ip_key and day = today;
+    return 'total';
+  end if;
+
+  return 'ok';
+end;
+$$;
+
+-- AI 요청이 실패했을 때 세션 횟수만 1회 되돌림 (화면도 성공했을 때만 횟수를 줄임)
+create or replace function public.refund_ai_session_quota(p_session_key text) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update api_usage set count = count - 1
+  where scope = 'ai_session' and key = p_session_key
+    and day = (now() at time zone 'Asia/Seoul')::date and count > 0;
+end;
+$$;
+
+revoke execute on function public.consume_ai_quota(text, integer, text, integer, integer) from public, anon, authenticated;
+revoke execute on function public.refund_ai_session_quota(text) from public, anon, authenticated;
+
 -- 한도 확인에는 오늘 기록만 쓰므로, 비용 확인용으로 30일만 남기고 지난 기록은 매일 지움
 -- 한국 시간 새벽 4시(UTC 19시)에 실행. 같은 이름으로 다시 실행하면 기존 작업을 덮어씀
 create extension if not exists pg_cron;

@@ -1,5 +1,5 @@
 import { DRAFT_KEYWORD_MAX_LENGTH } from "@/constants";
-import { consumeQuota, tooManyRequests } from "@/server/rateLimit";
+import { runWithAIQuota } from "@/server/rateLimit";
 import { GRID_SIZE, type GridSize } from "@/types";
 import { isGridSize, requestOpenAIImage } from "../_lib/openaiImage";
 import { readJsonBody } from "../_lib/readJsonBody";
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     return Response.json({ message: "캔버스 크기가 올바르지 않습니다." }, { status: 400 });
   }
 
-  if (!(await consumeQuota("ai", request))) return tooManyRequests();
-
-  return requestOpenAIImage("generations", { prompt: PROMPTS[size](keyword) });
+  return runWithAIQuota("draft", request, () =>
+    requestOpenAIImage("generations", { prompt: PROMPTS[size](keyword) }),
+  );
 }

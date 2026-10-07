@@ -1,4 +1,4 @@
-import { consumeQuota, tooManyRequests } from "@/server/rateLimit";
+import { runWithAIQuota } from "@/server/rateLimit";
 import { GRID_SIZE, type GridSize } from "@/types";
 import { isGridSize, requestOpenAIImage } from "../_lib/openaiImage";
 import { payloadTooLarge, readJsonBody } from "../_lib/readJsonBody";
@@ -56,10 +56,10 @@ export async function POST(request: Request) {
     return Response.json({ message: "그림 이미지가 너무 큽니다." }, { status: 413 });
   }
 
-  if (!(await consumeQuota("ai", request))) return tooManyRequests();
-
-  return requestOpenAIImage("edits", {
-    prompt: buildPrompt(size),
-    image: new Blob([buffer], { type: "image/png" }),
-  });
+  return runWithAIQuota("convert", request, () =>
+    requestOpenAIImage("edits", {
+      prompt: buildPrompt(size),
+      image: new Blob([buffer], { type: "image/png" }),
+    }),
+  );
 }

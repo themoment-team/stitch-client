@@ -1,6 +1,7 @@
 import type { GridSize, Pixels } from "@/types";
 import { findDraftByKeyword, imageToPixels, templateToPixels } from "@/utils";
 import { readImageResponse } from "./imageResponse";
+import { fetchWithSession } from "./session";
 
 export interface DraftRequest {
   keyword: string;
@@ -19,7 +20,7 @@ export interface DraftResult {
 export class DraftLimitError extends Error {}
 
 const requestAIDraft = async (keyword: string, size: GridSize) => {
-  const response = await fetch("/api/draft", {
+  const response = await fetchWithSession("/api/draft", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ keyword, size }),

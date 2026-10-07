@@ -3,9 +3,11 @@ import { STEPS } from "@/constants";
 
 interface StartPageProps {
   onStart: () => void;
+  /** 세션을 받는 중이면 시작하기를 다시 누르지 못하게 막음 */
+  starting: boolean;
 }
 
-const StartPage = ({ onStart }: StartPageProps) => {
+const StartPage = ({ onStart, starting }: StartPageProps) => {
   return (
     <StepCard>
       <div className="flex flex-col items-center gap-5">
@@ -46,7 +48,7 @@ const StartPage = ({ onStart }: StartPageProps) => {
         ))}
       </ol>
 
-      <StepButton variant="next" onClick={onStart}>
+      <StepButton variant="next" onClick={onStart} disabled={starting}>
         시작하기
       </StepButton>
     </StepCard>
