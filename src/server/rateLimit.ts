@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { RATE_LIMIT, type RateLimitScope } from "@/constants";
+import { AI_CONVERT_LIMIT, AI_DRAFT_LIMIT, RATE_LIMIT, type RateLimitScope } from "@/constants";
+import { getAISessionId } from "./aiSession";
 import { getSupabase } from "./supabase";
 
 /**
@@ -37,3 +38,74 @@ export const consumeQuota = async (scope: RateLimitScope, request: Request): Pro
 
 export const tooManyRequests = () =>
   Response.json({ message: "오늘 사용할 수 있는 횟수를 모두 썼습니다." }, { status: 429 });
+
+export type AIRequestKind = "draft" | "convert";
+
+/** 화면에 보여주는 이용자 한 명(세션)의 AI 횟수와 같게 서버에서도 제한 */
+const AI_SESSION_LIMIT: Record<AIRequestKind, number> = {
+  draft: AI_DRAFT_LIMIT,
+  convert: AI_CONVERT_LIMIT,
+};
+
+/** consume_ai_quota 결과. ok가 아니면 어느 한도에 걸렸는지 */
+type AIQuotaResult = "ok" | "session" | "ip" | "total";
+
+const getSessionKey = (kind: AIRequestKind, sessionId: string) => `${sessionId}:${kind}`;
+
+/** 세션별·IP별·전체 한도를 한 번에 확인하고, 모두 남아 있을 때만 1회씩 차감 */
+const consumeAIQuota = async (
+  kind: AIRequestKind,
+  sessionId: string,
+  request: Request,
+): Promise<AIQuotaResult | null> => {
+  try {
+    const { data, error } = await getSupabase().rpc("consume_ai_quota", {
+      p_session_key: getSessionKey(kind, sessionId),
+      p_session_limit: AI_SESSION_LIMIT[kind],
+      p_ip_key: hashIP(getClientIP(request)),
+      p_ip_limit: RATE_LIMIT.ai.perIP,
+      p_total_limit: RATE_LIMIT.ai.total,
+    });
+    if (error) throw error;
+    return data as AIQuotaResult;
+  } catch (error) {
+    console.error("AI 요청 한도를 확인하지 못했습니다.", error);
+    return null;
+  }
+};
+
+/**
+ * 화면은 AI 요청이 성공했을 때만 횟수를 줄이므로, 실패하면 세션 횟수만 되돌려 화면과 맞춤
+ * IP별·전체 횟수는 실패한 요청을 반복해 부하를 주지 못하도록 되돌리지 않음
+ */
+const refundAISessionQuota = async (kind: AIRequestKind, sessionId: string) => {
+  const { error } = await getSupabase().rpc("refund_ai_session_quota", {
+    p_session_key: getSessionKey(kind, sessionId),
+  });
+  if (error) console.error("AI 세션 횟수를 되돌리지 못했습니다.", error);
+};
+
+/**
+ * AI 이미지 요청을 한도 안에서만 실행
+ * - 시작하기에서 발급한 세션이 없거나 만료되면 401
+ * - 세션별·IP별·전체 한도 중 하나라도 찼거나 횟수를 확인할 수 없으면 429
+ */
+export const runWithAIQuota = async (
+  kind: AIRequestKind,
+  request: Request,
+  run: () => Promise<Response>,
+): Promise<Response> => {
+  const sessionId = await getAISessionId();
+  if (!sessionId) {
+    return Response.json({ message: "처음 화면에서 다시 시작해주세요." }, { status: 401 });
+  }
+
+  const result = await consumeAIQuota(kind, sessionId, request);
+  // 전체 한도가 차면 모든 이용자가 AI를 쓸 수 없으므로 로그로 남겨 운영자가 확인할 수 있게 함
+  if (result === "total") console.warn(`AI 전체 하루 한도(${RATE_LIMIT.ai.total}회)를 모두 썼습니다.`);
+  if (result !== "ok") return tooManyRequests();
+
+  const response = await run();
+  if (!response.ok) await refundAISessionQuota(kind, sessionId);
+  return response;
+};

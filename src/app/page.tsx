@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { startSession } from "@/apis";
 import { AI_CONVERT_LIMIT, AI_DRAFT_LIMIT, DRAW_TIME_LIMIT } from "@/constants";
 import { ConvertPage, DrawPage, PrintPage, StartPage } from "@/pageContainer";
 import { type ConvertSnapshot, type Drawing, type Pixels, STEP, type Step } from "@/types";
@@ -27,7 +28,18 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   // DB에 저장한 그림과 id. 출력에서 이전으로 갔다가 같은 그림으로 돌아오면 다시 저장하지 않음
   const [saved, setSaved] = useState<{ pixels: Pixels; id: string } | null>(null);
 
-  const handleStart = () => {
+  const [isStarting, setIsStarting] = useState(false);
+
+  const handleStart = async () => {
+    // 처음 시작할 때만 서버에서 새 세션을 받아 AI 횟수를 새로 셈
+    // 그리기에서 이전으로 왔다가 다시 시작하면 같은 세션을 이어 써서 횟수가 초기화되지 않음
+    if (drawEndAt === null) {
+      if (isStarting) return;
+      setIsStarting(true);
+      // 세션을 받지 못해도 그리기는 할 수 있게 진행하고, AI 요청만 실패로 안내
+      await startSession().catch((error) => console.error(error));
+      setIsStarting(false);
+    }
     setDrawEndAt((prev) => prev ?? Date.now() + DRAW_TIME_LIMIT * 1000);
     setStep(STEP.DRAW);
   };
@@ -72,7 +84,7 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
-      {step === STEP.START && <StartPage onStart={handleStart} />}
+      {step === STEP.START && <StartPage onStart={handleStart} starting={isStarting} />}
       {step === STEP.DRAW && drawEndAt !== null && (
         <DrawPage
           endAt={drawEndAt}
