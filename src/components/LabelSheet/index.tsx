@@ -21,7 +21,7 @@ const {
 const LABEL_COUNT = columns * rows;
 
 /**
- * A4 라벨지에 맞춰 인쇄되는 스티커 시트 (인쇄할 때만 보임)
+ * A4 한 장에 여러 개 찍히는 스티커 시트 (인쇄할 때만 보임)
  * 마지막 칸에는 그림 대신 다운로드 QR 코드를 넣고, 나머지 칸에는 그림을 하나씩 찍음
  */
 const LabelSheet = ({ drawingImage, qrCode }: LabelSheetProps) => (
@@ -41,7 +41,7 @@ const LabelSheet = ({ drawingImage, qrCode }: LabelSheetProps) => (
   >
     {Array.from({ length: LABEL_COUNT }, (_, index) =>
       index === LABEL_COUNT - 1 ? (
-        <div key={index} className="flex flex-col items-center justify-center gap-[2mm]">
+        <div key={index} className="flex flex-col items-center justify-center gap-[1mm]">
           {/* eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 data URL이라 최적화 대상이 아님 */}
           <img
             src={qrCode}
@@ -50,8 +50,8 @@ const LabelSheet = ({ drawingImage, qrCode }: LabelSheetProps) => (
             style={{ width: `${LABEL_QR_SIZE}mm`, height: `${LABEL_QR_SIZE}mm` }}
           />
           <div className="flex flex-col items-center gap-[0.5mm] text-center text-ink">
-            <span className="text-[12pt] font-black">Stitch</span>
-            <span className="text-[8pt] font-medium">QR 코드를 찍으면 내 그림을 저장할 수 있어요</span>
+            <span className="text-[7pt] leading-none font-black">Stitch</span>
+            <span className="text-[5pt] leading-tight font-medium">QR 코드를 찍으면 내 그림을 저장할 수 있어요</span>
           </div>
         </div>
       ) : (
