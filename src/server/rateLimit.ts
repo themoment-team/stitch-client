@@ -2,14 +2,30 @@ import { createHash } from "node:crypto";
 import { RATE_LIMIT, type RateLimitScope } from "@/constants";
 import { getSupabase } from "./supabase";
 
+/** IP를 알 수 없는 요청은 모두 한 사람으로 셈. 한도가 빡빡해질 뿐 우회되지는 않음 */
+const UNKNOWN_IP = "unknown";
+
 /**
- * 요청한 사람의 IP. Vercel은 이 헤더를 직접 덮어써서 클라이언트가 조작할 수 없음
- * 로컬 개발처럼 헤더가 없으면 모두 한 사람으로 셈
+ * 요청한 사람의 IP. 신뢰할 프록시가 직접 채운 헤더만 쓰고, 클라이언트가 보낸 헤더는 믿지 않음
+ * - Vercel: x-vercel-forwarded-for를 Vercel이 직접 덮어써서 조작할 수 없음
+ *   (x-forwarded-for·x-real-ip는 Vercel 앞에 다른 프록시를 두면 바뀔 수 있어 쓰지 않음)
+ * - 그 밖의 배포: TRUSTED_IP_HEADER에 앞단 프록시가 채우는 헤더 이름을 넣음
+ *   프록시는 받은 값 뒤에 IP를 덧붙이므로, 클라이언트가 앞에 끼워 넣은 값을 피하려고 마지막 값을 씀
+ * - 둘 다 아니면(로컬 개발, 프록시 없이 서버 직접 노출) 헤더를 무시하고 모두 한 사람으로 셈
+ *   Next 서버는 x-forwarded-for가 이미 있으면 소켓 IP로 덮어쓰지 않아 클라이언트가 값을 정할 수 있기 때문
  */
-const getClientIP = (request: Request) =>
-  request.headers.get("x-real-ip") ??
-  request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-  "unknown";
+const getClientIP = (request: Request) => {
+  if (process.env.VERCEL) {
+    return request.headers.get("x-vercel-forwarded-for")?.split(",")[0].trim() || UNKNOWN_IP;
+  }
+
+  const trustedHeader = process.env.TRUSTED_IP_HEADER?.trim();
+  if (trustedHeader) {
+    return request.headers.get(trustedHeader)?.split(",").at(-1)?.trim() || UNKNOWN_IP;
+  }
+
+  return UNKNOWN_IP;
+};
 
 // IP를 그대로 저장하지 않도록 해시값만 기록
 const hashIP = (ip: string) => createHash("sha256").update(ip).digest("hex").slice(0, 32);

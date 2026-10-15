@@ -5,6 +5,7 @@ export { default as PixelCanvas } from "./PixelCanvas";
 export { default as PixelPreview } from "./PixelPreview";
 export { default as StepButton } from "./StepButton";
 export { default as StepCard } from "./StepCard";
-export { default as StepLabel } from "./StepLabel";
+export { default as StepHeader } from "./StepHeader";
+export { default as StepIndicator } from "./StepIndicator";
 export { default as Timer } from "./Timer";
 export { default as ToolButton } from "./ToolButton";

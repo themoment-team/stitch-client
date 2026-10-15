@@ -10,6 +10,9 @@ create table if not exists public.drawings (
 -- 정책을 두지 않아 공개 키(anon)로는 읽고 쓸 수 없고, 서버의 service role 키로만 접근
 alter table public.drawings enable row level security;
 
+-- 오래된 그림을 기간으로 찾아 정리할 때 전체를 훑지 않도록 저장 시각에 인덱스를 둠
+create index if not exists drawings_created_at_idx on public.drawings (created_at);
+
 -- API 요청 횟수 기록. 비용이 드는 AI 호출과 DB 저장이 무제한으로 일어나지 않도록 하루 단위로 셈
 -- key: 요청한 IP의 해시값, 전체 합계는 '*'
 create table if not exists public.api_usage (
@@ -58,3 +61,13 @@ $$;
 
 -- 서버의 service role 키로만 호출할 수 있도록 공개 키에서는 실행 권한을 뺌
 revoke execute on function public.consume_api_quota(text, text, integer, integer) from public, anon, authenticated;
+
+-- 한도 확인에는 오늘 기록만 쓰므로, 비용 확인용으로 30일만 남기고 지난 기록은 매일 지움
+-- 한국 시간 새벽 4시(UTC 19시)에 실행. 같은 이름으로 다시 실행하면 기존 작업을 덮어씀
+create extension if not exists pg_cron;
+
+select cron.schedule(
+  'cleanup-api-usage',
+  '0 19 * * *',
+  $$delete from public.api_usage where day < (now() at time zone 'Asia/Seoul')::date - 30$$
+);

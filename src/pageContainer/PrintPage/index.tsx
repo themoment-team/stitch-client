@@ -1,7 +1,7 @@
 import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RateLimitError, saveDrawing } from "@/apis";
-import { Icon, LabelSheet, PixelPreview, StepButton, StepCard, StepLabel } from "@/components";
+import { Icon, LabelSheet, PixelPreview, StepCard, StepHeader } from "@/components";
 import { PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
 import type { Drawing } from "@/types";
 import { drawingToPngDataUrl } from "@/utils";
@@ -17,9 +17,13 @@ interface PrintPageProps {
   onRestart: () => void;
 }
 
-type SaveStatus = "saving" | "saved" | "limit" | "error";
+/** 저장 실패와 QR 생성 실패를 나눠야 다시 시도할 때 이미 저장된 그림을 또 저장하지 않음 */
+type SaveStatus = "saving" | "saved" | "limit" | "saveError" | "qrError";
 
 const QR_OPTIONS = { margin: 1, width: 512 };
+
+const cardStyles =
+  "flex w-full flex-col gap-3 rounded-3xl bg-background p-3 text-left shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)] sm:p-4";
 
 /**
  * QR에 넣을 사이트 주소. 없거나 빈 값이면 지금 접속한 주소를 씀
@@ -38,6 +42,16 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
   // 인쇄물에는 캔버스 대신 이미지로 넣어야 브라우저마다 픽셀이 번지지 않고 그대로 찍힘
   const drawingImage = useMemo(() => drawingToPngDataUrl(drawing), [drawing]);
 
+  const createQRCode = (drawingId: string) => {
+    const shareUrl = `${SITE_URL || window.location.origin}/share/${drawingId}`;
+    QRCode.toDataURL(shareUrl, QR_OPTIONS)
+      .then((dataUrl) => {
+        setQRCode(dataUrl);
+        setStatus("saved");
+      })
+      .catch(() => setStatus("qrError"));
+  };
+
   const save = () => {
     if (isSavingRef.current) return;
 
@@ -48,13 +62,18 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
         onSaved(newId);
         setStatus("saved");
       })
-      .catch((error) => setStatus(error instanceof RateLimitError ? "limit" : "error"))
+      .catch((error) => setStatus(error instanceof RateLimitError ? "limit" : "saveError"))
       .finally(() => {
         isSavingRef.current = false;
       });
   };
 
   const handleRetry = () => {
+    // 이미 저장된 그림이면 저장은 건너뛰고 같은 id로 QR만 다시 만듦. id가 그대로라 아래 effect는 다시 돌지 않으므로 직접 호출
+    if (id) {
+      createQRCode(id);
+      return;
+    }
     setStatus("saving");
     save();
   };
@@ -66,47 +85,41 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
   }, []);
 
   useEffect(() => {
-    if (!id) return;
-    const shareUrl = `${SITE_URL || window.location.origin}/share/${id}`;
-    QRCode.toDataURL(shareUrl, QR_OPTIONS)
-      .then(setQRCode)
-      .catch(() => setStatus("error"));
+    // 저장으로 id가 정해지면 QR을 만듦
+    if (id) createQRCode(id);
   }, [id]);
 
   const canPrint = status === "saved" && qrCode !== null;
+  const canRetry = status === "saveError" || status === "qrError";
 
   return (
     <>
       <StepCard size="wide">
-        <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
-          <div className="justify-self-start">
-            <StepButton variant="back" onClick={onBack} disabled={status === "saving"}>
-              이전
-            </StepButton>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <StepLabel current={4} />
-            <h1 className="text-lg font-bold tracking-tight whitespace-nowrap text-ink max-[359px]:text-[0.9375rem] sm:text-2xl">
-              스티커가 완성됐어요
-            </h1>
-          </div>
-          <div />
-        </header>
+        <StepHeader
+          current={3}
+          title="스티커가 완성됐어요"
+          description="인쇄물의 QR 코드를 찍으면 그림을 휴대폰에 저장할 수 있어요."
+          onBack={onBack}
+          backDisabled={status === "saving"}
+        />
 
-        <p className="text-sm font-medium text-muted sm:text-base">
-          인쇄물의 QR 코드를 찍으면 그림을 휴대폰에 저장할 수 있어요.
-        </p>
-
-        <div className="grid w-full max-w-3xl items-center gap-6 sm:grid-cols-[minmax(0,1fr)_14rem] sm:gap-8">
-          <div className="rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)] sm:p-4">
+        {/* 3단계 비교 카드와 같은 크기·모양으로 그림과 QR 코드를 나란히 보여줌 */}
+        <div className="grid w-full max-w-3xl grid-cols-2 gap-4 sm:gap-6">
+          <div className={cardStyles}>
+            <span className="truncate px-1 text-sm font-semibold text-muted">완성한 그림</span>
             <PixelPreview drawing={drawing} label="완성한 그림" />
           </div>
 
-          <div className="mx-auto flex w-full max-w-56 flex-col items-center gap-3">
-            <div className="flex aspect-square w-full items-center justify-center rounded-3xl bg-white p-3 shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)]">
+          <div className={cardStyles}>
+            <span className="truncate px-1 text-sm font-semibold text-muted">다운로드 QR 코드</span>
+            <div className="flex aspect-square w-full items-center justify-center rounded-2xl bg-white p-3 sm:p-5">
               {qrCode ? (
                 // eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 data URL이라 최적화 대상이 아님
-                <img src={qrCode} alt="그림 다운로드 QR 코드" className="size-full [image-rendering:pixelated]" />
+                <img
+                  src={qrCode}
+                  alt="그림 다운로드 QR 코드"
+                  className="size-full [image-rendering:pixelated] motion-safe:animate-pop"
+                />
               ) : (
                 <span
                   role={status === "saving" ? "status" : undefined}
@@ -116,7 +129,6 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
                 </span>
               )}
             </div>
-            <span className="text-xs font-medium text-subtle">다운로드 QR 코드</span>
           </div>
         </div>
 
@@ -126,7 +138,7 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
               <Icon name="printer" className="size-4" />
               인쇄하기
             </button>
-            {status === "error" && (
+            {canRetry && (
               <button type="button" onClick={handleRetry} className={SECONDARY_BUTTON_STYLES}>
                 <Icon name="reset" className="size-4" />
                 다시 시도
@@ -141,9 +153,14 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
               처음으로
             </button>
           </div>
-          {status === "error" && (
+          {status === "saveError" && (
             <p className="text-xs font-medium text-danger" role="alert">
               그림을 저장하지 못했어요. 다시 시도해주세요.
+            </p>
+          )}
+          {status === "qrError" && (
+            <p className="text-xs font-medium text-danger" role="alert">
+              QR 코드를 만들지 못했어요. 다시 시도해주세요.
             </p>
           )}
           {status === "limit" && (

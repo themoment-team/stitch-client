@@ -54,10 +54,7 @@ const SharePage = ({ drawing }: SharePageProps) => {
 
   return (
     <StepCard>
-      <div className="flex flex-col items-center gap-3">
-        <span className="text-xs font-bold tracking-[0.3em] text-subtle uppercase">Stitch</span>
-        <h1 className="text-2xl font-bold tracking-tight text-ink">내가 만든 스티커</h1>
-      </div>
+      <h1 className="text-2xl font-bold tracking-tight text-ink">내가 만든 스티커</h1>
 
       <div className="w-full max-w-72 rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]">
         {/* eslint-disable-next-line @next/next/no-img-element -- 브라우저에서 만든 data URL이라 최적화 대상이 아님 */}

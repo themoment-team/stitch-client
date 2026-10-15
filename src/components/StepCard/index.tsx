@@ -5,8 +5,8 @@ interface StepCardProps {
 
 const StepCard = ({ children, size = "default" }: StepCardProps) => {
   const sizeStyles = {
-    default: "h-160 max-h-[85dvh] max-w-lg justify-between px-10 py-14 sm:px-12 sm:py-16",
-    wide: "max-w-5xl gap-8 px-6 py-8 sm:px-10 sm:py-10",
+    default: "max-w-lg gap-8 px-8 py-10 sm:px-10 sm:py-12",
+    wide: "max-w-5xl gap-6 px-6 py-8 sm:px-10 sm:py-10",
   };
 
   return (

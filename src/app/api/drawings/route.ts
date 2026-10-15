@@ -1,8 +1,14 @@
 import { insertDrawing, isValidDrawing } from "@/server/drawingStore";
 import { consumeQuota, tooManyRequests } from "@/server/rateLimit";
+import { readJsonBody } from "../_lib/readJsonBody";
+
+/** 32×32 그림의 칸 1,024개가 모두 색(약 10바이트)이어도 약 10KB라 넉넉히 잡음 */
+const MAX_BODY_BYTES = 32 * 1024;
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
+  const parsed = await readJsonBody(request, MAX_BODY_BYTES);
+  if ("error" in parsed) return parsed.error;
+  const { body } = parsed;
   if (!isValidDrawing(body)) {
     return Response.json({ message: "그림이 올바르지 않습니다." }, { status: 400 });
   }

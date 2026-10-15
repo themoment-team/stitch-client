@@ -6,11 +6,17 @@ import {
   PixelCanvas,
   StepButton,
   StepCard,
-  StepLabel,
+  StepHeader,
   Timer,
   ToolButton,
 } from "@/components";
-import { AI_DRAFT_LIMIT, DRAFT_KEYWORD_MAX_LENGTH, PALETTE } from "@/constants";
+import {
+  AI_DRAFT_LIMIT,
+  DRAFT_KEYWORD_MAX_LENGTH,
+  PALETTE,
+  SMALL_PRIMARY_BUTTON_STYLES,
+  SMALL_SECONDARY_BUTTON_STYLES,
+} from "@/constants";
 import { useCountdown, useDrawingHistory } from "@/hooks";
 import { DRAW_TOOL, type Drawing, type DrawTool, GRID_SIZE } from "@/types";
 import { createEmptyPixels, isEmptyPixels } from "@/utils";
@@ -36,9 +42,6 @@ const EMPTY_DRAWING: Drawing = {
 
 type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "dailyLimit" | "error";
 
-const guideButtonStyles =
-  "cursor-pointer rounded-full bg-background px-3 py-1.5 text-xs font-semibold text-muted shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] transition-all duration-200 hover:text-ink active:shadow-[inset_2px_2px_4px_var(--neu-dark),inset_-2px_-2px_4px_var(--neu-light)]";
-
 const DrawPage = ({
   endAt,
   initialDrawing,
@@ -48,7 +51,7 @@ const DrawPage = ({
   onBack,
   onNext,
 }: DrawPageProps) => {
-  const { drawing, canUndo, startStroke, paint, endStroke, undo, reset, resize } =
+  const { drawing, canUndo, startStroke, paint, endStroke, fill, undo, reset, resize } =
     useDrawingHistory(initialDrawing ?? EMPTY_DRAWING);
   const { remaining, isOver } = useCountdown(endAt);
   const [tool, setTool] = useState<DrawTool>(DRAW_TOOL.PEN);
@@ -67,18 +70,24 @@ const DrawPage = ({
   const isDraftLoading = draftStatus === "loading";
   // 도안은 만든 캔버스 크기에서만 보여줌 (크기를 바꿨다 되돌리면 다시 보임)
   const visibleGuide = isGuideVisible && guide?.size === drawing.size ? guide.pixels : null;
+  // AI 도안을 기다리는 중에 화면을 떠나면 결과가 버려지고 횟수만 차감되므로 이전·다음 모두 잠금
+  // 요청은 서버 타임아웃이 있어 반드시 끝나므로, 시간이 끝난 뒤에도 완료될 때까지 기다림
   // 시간이 끝나면 이전으로 돌아가 다시 그릴 수 없고, 빈 그림이어도 다음으로만 진행
-  const canGoNext = isOver || !isEmpty;
-  // AI 도안을 기다리는 중에 이전으로 가면 결과가 버려지고 횟수만 차감되므로 이전도 잠금
+  const canGoNext = !isDraftLoading && (isOver || !isEmpty);
   const canGoBack = !isOver && !isDraftLoading;
 
   const handlePaint = (indices: number[]) => {
     paint(indices, tool === DRAW_TOOL.PEN ? color : null);
   };
 
+  const handleFill = (index: number) => {
+    fill(index, color);
+  };
+
   const handleColorChange = (nextColor: string) => {
     setColor(nextColor);
-    setTool(DRAW_TOOL.PEN);
+    // 채우기 중에는 도구를 유지하고, 지우개일 때만 펜으로 바꿈
+    if (tool === DRAW_TOOL.ERASER) setTool(DRAW_TOOL.PEN);
   };
 
   const handleGenerateDraft = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -112,24 +121,15 @@ const DrawPage = ({
 
   return (
     <StepCard size="wide">
-      <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
-        <div className="justify-self-start">
-          <StepButton variant="back" onClick={() => onBack(drawing, guide)} disabled={!canGoBack}>
-            이전
-          </StepButton>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <StepLabel current={2} />
-          <h1 className="text-lg font-bold tracking-tight whitespace-nowrap text-ink max-[359px]:text-[0.9375rem] sm:text-2xl">
-            자유롭게 그려보세요
-          </h1>
-        </div>
-        <div className="justify-self-end">
-          <Timer remaining={remaining} />
-        </div>
-      </header>
+      <StepHeader
+        current={1}
+        title="자유롭게 그려보세요"
+        onBack={() => onBack(drawing, guide)}
+        backDisabled={!canGoBack}
+        aside={<Timer remaining={remaining} />}
+      />
 
-      <div className="grid w-full items-start gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <section className="flex flex-col items-center gap-3">
           <div className="w-full max-w-[min(34rem,60dvh)] rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]">
             <PixelCanvas
@@ -139,58 +139,19 @@ const DrawPage = ({
               onStrokeStart={startStroke}
               onPaint={handlePaint}
               onStrokeEnd={endStroke}
+              onFill={tool === DRAW_TOOL.FILL ? handleFill : undefined}
             />
           </div>
           {isOver && (
             <p className="text-sm font-medium text-danger" role="status">
-              시간이 끝났어요. 다음 단계로 넘어가주세요.
+              {isDraftLoading
+                ? "시간이 끝났어요. AI 도안이 완성되면 다음 단계로 넘어갈 수 있어요."
+                : "시간이 끝났어요. 다음 단계로 넘어가주세요."}
             </p>
           )}
         </section>
 
-        <aside className="mx-auto flex w-full max-w-[34rem] flex-col gap-7 text-left">
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">캔버스 크기</legend>
-            <div className="grid grid-cols-2 gap-3">
-              {Object.values(GRID_SIZE).map((size) => (
-                <ToolButton
-                  key={size}
-                  label={`${size} × ${size}`}
-                  onClick={() => resize(size)}
-                  active={drawing.size === size}
-                  disabled={isLocked || isDraftLoading}
-                />
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">도구</legend>
-            <div className="grid grid-cols-4 gap-3">
-              <ToolButton
-                label="펜"
-                icon="pen"
-                onClick={() => setTool(DRAW_TOOL.PEN)}
-                active={tool === DRAW_TOOL.PEN}
-                disabled={isLocked}
-              />
-              <ToolButton
-                label="지우개"
-                icon="eraser"
-                onClick={() => setTool(DRAW_TOOL.ERASER)}
-                active={tool === DRAW_TOOL.ERASER}
-                disabled={isLocked}
-              />
-              <ToolButton label="되돌리기" icon="undo" onClick={undo} disabled={isLocked || !canUndo} />
-              <ToolButton label="초기화" icon="reset" onClick={reset} disabled={isLocked || isEmpty} />
-            </div>
-          </fieldset>
-
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
-            <ColorPalette value={color} onChange={handleColorChange} disabled={isLocked} />
-          </fieldset>
-
+        <aside className="mx-auto flex w-full max-w-[34rem] flex-col gap-6 text-left">
           <form className="flex flex-col gap-3" onSubmit={handleGenerateDraft}>
             <div className="flex items-center justify-between">
               <label htmlFor="draft-keyword" className="text-sm font-semibold text-muted">
@@ -209,12 +170,12 @@ const DrawPage = ({
                 placeholder="예) 웃는 고양이"
                 maxLength={DRAFT_KEYWORD_MAX_LENGTH}
                 disabled={isLocked || isDraftLoading}
-                className="min-w-0 flex-1 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-ink shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)] outline-none placeholder:font-normal placeholder:text-subtle focus-visible:ring-2 focus-visible:ring-(--accent-dark) disabled:opacity-40"
+                className="min-w-0 flex-1 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-ink shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] outline-none placeholder:font-normal placeholder:text-subtle focus-visible:ring-2 focus-visible:ring-(--accent-dark) disabled:opacity-40"
               />
               <button
                 type="submit"
                 disabled={isLocked || isDraftLoading || !keyword.trim()}
-                className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-2xl bg-accent px-4 text-sm font-semibold text-ink shadow-[5px_5px_10px_var(--accent-dark),-5px_-5px_10px_var(--accent-light)] transition-all duration-200 enabled:active:shadow-[inset_3px_3px_6px_var(--accent-dark),inset_-3px_-3px_6px_var(--accent-light)] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                className={`${SMALL_PRIMARY_BUTTON_STYLES} shrink-0`}
               >
                 <Icon name="sparkles" className="size-4" />
                 {isDraftLoading ? "그리는 중" : "생성"}
@@ -230,11 +191,11 @@ const DrawPage = ({
                 <button
                   type="button"
                   onClick={() => setIsGuideVisible((prev) => !prev)}
-                  className={guideButtonStyles}
+                  className={SMALL_SECONDARY_BUTTON_STYLES}
                 >
                   {isGuideVisible ? "도안 숨기기" : "도안 보이기"}
                 </button>
-                <button type="button" onClick={() => setGuide(null)} className={guideButtonStyles}>
+                <button type="button" onClick={() => setGuide(null)} className={SMALL_SECONDARY_BUTTON_STYLES}>
                   도안 지우기
                 </button>
                 {guide.size !== drawing.size && (
@@ -265,6 +226,57 @@ const DrawPage = ({
               </p>
             )}
           </form>
+
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-3 text-sm font-semibold text-muted">캔버스 크기</legend>
+            <div className="grid grid-cols-2 gap-3">
+              {Object.values(GRID_SIZE).map((size) => (
+                <ToolButton
+                  key={size}
+                  label={`${size} × ${size}`}
+                  onClick={() => resize(size)}
+                  active={drawing.size === size}
+                  disabled={isLocked || isDraftLoading}
+                />
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-3 text-sm font-semibold text-muted">도구</legend>
+            <div className="grid grid-cols-3 gap-3">
+              <ToolButton
+                label="펜"
+                icon="pen"
+                onClick={() => setTool(DRAW_TOOL.PEN)}
+                active={tool === DRAW_TOOL.PEN}
+                disabled={isLocked}
+              />
+              <ToolButton
+                label="지우개"
+                icon="eraser"
+                onClick={() => setTool(DRAW_TOOL.ERASER)}
+                active={tool === DRAW_TOOL.ERASER}
+                disabled={isLocked}
+              />
+              <ToolButton
+                label="채우기"
+                icon="fill"
+                onClick={() => setTool(DRAW_TOOL.FILL)}
+                active={tool === DRAW_TOOL.FILL}
+                disabled={isLocked}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <ToolButton label="되돌리기" icon="undo" onClick={undo} disabled={isLocked || !canUndo} />
+              <ToolButton label="초기화" icon="reset" onClick={reset} disabled={isLocked || isEmpty} />
+            </div>
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
+            <ColorPalette value={color} onChange={handleColorChange} disabled={isLocked} />
+          </fieldset>
         </aside>
       </div>
 

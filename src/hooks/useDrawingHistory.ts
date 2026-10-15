@@ -1,7 +1,7 @@
 import { useReducer } from "react";
 import { HISTORY_LIMIT } from "@/constants";
 import type { Drawing, GridSize } from "@/types";
-import { createEmptyPixels, isEmptyPixels } from "@/utils";
+import { createEmptyPixels, getFillIndices, isEmptyPixels } from "@/utils";
 
 interface DrawingState {
   current: Drawing;
@@ -14,6 +14,7 @@ type DrawingAction =
   | { type: "STROKE_START" }
   | { type: "PAINT"; indices: number[]; color: string | null }
   | { type: "STROKE_END" }
+  | { type: "FILL"; index: number; color: string }
   | { type: "UNDO" }
   | { type: "RESET" }
   | { type: "RESIZE"; size: GridSize };
@@ -42,6 +43,22 @@ const drawingReducer = (state: DrawingState, action: DrawingAction): DrawingStat
       // 칠해진 칸이 없는 획은 되돌리기 기록에 남기지 않음
       if (!strokeBase || strokeBase === state.current) return { ...state, strokeBase: null };
       return { ...state, history: pushHistory(state.history, strokeBase), strokeBase: null };
+    }
+
+    case "FILL": {
+      const { size, pixels } = state.current;
+      // 이미 같은 색인 영역은 그림도 되돌리기 기록도 바꾸지 않음
+      if (pixels[action.index] === action.color) return state;
+
+      const nextPixels = [...pixels];
+      getFillIndices(pixels, size, action.index).forEach((index) => {
+        nextPixels[index] = action.color;
+      });
+      return {
+        current: { ...state.current, pixels: nextPixels },
+        history: pushHistory(state.history, state.current),
+        strokeBase: null,
+      };
     }
 
     case "UNDO": {
@@ -83,6 +100,7 @@ export const useDrawingHistory = (initialDrawing: Drawing) => {
     startStroke: () => dispatch({ type: "STROKE_START" }),
     paint: (indices: number[], color: string | null) => dispatch({ type: "PAINT", indices, color }),
     endStroke: () => dispatch({ type: "STROKE_END" }),
+    fill: (index: number, color: string) => dispatch({ type: "FILL", index, color }),
     undo: () => dispatch({ type: "UNDO" }),
     reset: () => dispatch({ type: "RESET" }),
     resize: (size: GridSize) => dispatch({ type: "RESIZE", size }),

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { AIBlockedError, convertDrawing, RateLimitError } from "@/apis";
-import { Icon, PixelPreview, StepButton, StepCard, StepLabel } from "@/components";
+import { Icon, PixelPreview, StepButton, StepCard, StepHeader } from "@/components";
 import { AI_CONVERT_LIMIT, PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
 import type { ConvertChoice, ConvertSnapshot, Drawing, Pixels } from "@/types";
 import { isEmptyPixels } from "@/utils";
@@ -25,6 +25,7 @@ const cardShadow = "shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--ne
 
 interface ChoiceCardProps {
   title: string;
+  className?: string;
   selected: boolean;
   disabled?: boolean;
   onSelect: () => void;
@@ -32,13 +33,13 @@ interface ChoiceCardProps {
 }
 
 /** 비교해서 고를 수 있는 그림 카드. 선택되면 브랜드 포인트 색으로 표시 */
-const ChoiceCard = ({ title, selected, disabled = false, onSelect, children }: ChoiceCardProps) => (
+const ChoiceCard = ({ title, className = "", selected, disabled = false, onSelect, children }: ChoiceCardProps) => (
   <button
     type="button"
     onClick={onSelect}
     disabled={disabled}
     aria-pressed={selected}
-    className={`${cardStyles} cursor-pointer transition-all duration-200 disabled:cursor-default ${
+    className={`${cardStyles} ${className} cursor-pointer transition-all duration-200 enabled:active:scale-[0.98] disabled:cursor-default ${
       selected
         ? "bg-accent shadow-[5px_5px_10px_var(--accent-dark),-5px_-5px_10px_var(--accent-light)]"
         : `bg-background ${cardShadow}`
@@ -112,26 +113,17 @@ const ConvertPage = ({
 
   return (
     <StepCard size="wide">
-      <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
-        <div className="justify-self-start">
-          <StepButton variant="back" onClick={() => onBack({ results, choice })} disabled={isLoading}>
-            이전
-          </StepButton>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <StepLabel current={3} />
-          <h1 className="text-lg font-bold tracking-tight whitespace-nowrap text-ink max-[359px]:text-[0.9375rem] sm:text-2xl">
-            AI로 다듬으실 건가요?
-          </h1>
-        </div>
-        <div />
-      </header>
-
-      <p className="text-sm font-medium text-muted sm:text-base">
-        {hasResult
-          ? "내 그림과 AI가 다듬은 그림을 비교하고 마음에 드는 걸 골라주세요."
-          : "원하면 AI가 내 그림을 더 깔끔하게 다듬어줘요."}
-      </p>
+      <StepHeader
+        current={2}
+        title="AI로 다듬으실 건가요?"
+        description={
+          hasResult
+            ? "내 그림과 AI가 다듬은 그림을 비교하고 마음에 드는 걸 골라주세요."
+            : "원하면 AI가 내 그림을 더 깔끔하게 다듬어줘요."
+        }
+        onBack={() => onBack({ results, choice })}
+        backDisabled={isLoading}
+      />
 
       <div
         className={`grid w-full grid-cols-2 gap-4 sm:gap-6 ${
@@ -146,6 +138,8 @@ const ConvertPage = ({
           <ChoiceCard
             key={index}
             title={`AI 다듬기 ${index + 1}`}
+            // 새로 다듬어진 결과가 튕기듯 나타남
+            className="motion-safe:animate-pop"
             selected={choice === index}
             disabled={isLoading}
             onSelect={() => setChoice(index)}
@@ -162,8 +156,15 @@ const ConvertPage = ({
             </span>
             <div
               role={isLoading ? "status" : undefined}
-              className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-2xl bg-white/60 text-subtle"
+              className="relative flex aspect-square w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl bg-white/60 text-subtle"
             >
+              {/* 다듬는 동안 카드 위로 빛이 지나가며 진행 중임을 보여줌 */}
+              {isLoading && (
+                <span
+                  aria-hidden
+                  className="absolute inset-0 bg-[linear-gradient(110deg,transparent_30%,rgba(255,255,255,0.9)_50%,transparent_70%)] bg-size-[200%_100%] motion-safe:animate-shimmer"
+                />
+              )}
               <Icon name="sparkles" className={`size-8 ${isLoading ? "animate-pulse" : ""}`} />
               <span className="px-2 text-center text-xs font-medium sm:text-sm">
                 {isLoading ? (
