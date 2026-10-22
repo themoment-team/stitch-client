@@ -1,4 +1,4 @@
-import type { Drawing } from "@/types";
+import type { BoardDrawing, Drawing } from "@/types";
 import { RateLimitError } from "./errors";
 
 interface SaveDrawingResponse {
@@ -17,4 +17,18 @@ export const saveDrawing = async (drawing: Drawing): Promise<string> => {
 
   const { id }: SaveDrawingResponse = await response.json();
   return id;
+};
+
+interface FetchDrawingsResponse {
+  drawings: BoardDrawing[];
+}
+
+/** 보드에 띄울 그림 중 after(ISO 시각) 이후에 저장된 그림을 새것부터 받아옴 */
+export const fetchNewDrawings = async (after?: string): Promise<BoardDrawing[]> => {
+  const query = after ? `?${new URLSearchParams({ after })}` : "";
+  const response = await fetch(`/api/drawings${query}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`그림 조회 실패: ${response.status}`);
+
+  const { drawings }: FetchDrawingsResponse = await response.json();
+  return drawings;
 };

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Drawing } from "@/types";
+import { drawPixels } from "@/utils";
 
 interface PixelPreviewProps {
   drawing: Drawing;
@@ -18,13 +19,8 @@ const PixelPreview = ({ drawing, label }: PixelPreviewProps) => {
     const context = canvasRef.current?.getContext("2d");
     if (!context) return;
 
-    const cellSize = RESOLUTION / size;
     context.clearRect(0, 0, RESOLUTION, RESOLUTION);
-    pixels.forEach((color, index) => {
-      if (!color) return;
-      context.fillStyle = color;
-      context.fillRect((index % size) * cellSize, Math.floor(index / size) * cellSize, cellSize, cellSize);
-    });
+    drawPixels(context, { size, pixels }, RESOLUTION / size);
   }, [size, pixels]);
 
   return (

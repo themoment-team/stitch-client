@@ -1,3 +1,4 @@
+export { default as BoardScene } from "./BoardScene";
 export { default as ColorPalette } from "./ColorPalette";
 export { default as Icon } from "./Icon";
 export { default as LabelSheet } from "./LabelSheet";
