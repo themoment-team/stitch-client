@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { BoardDrawing, Drawing } from "@/types";
+import { drawPixels } from "@/utils";
 
 interface BoardSceneProps {
   drawings: BoardDrawing[];
@@ -85,17 +86,38 @@ const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 
 const getSpriteSize = (width: number, height: number, count: number) =>
   clamp(Math.sqrt((width * height) / Math.max(count, 8)) * 0.6, 64, 200);
 
-const createSpriteImage = ({ size, pixels }: Drawing) => {
+const createSpriteImage = (drawing: Drawing) => {
   const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
+  canvas.width = drawing.size;
+  canvas.height = drawing.size;
   const context = canvas.getContext("2d");
-  pixels.forEach((color, index) => {
-    if (!color || !context) return;
-    context.fillStyle = color;
-    context.fillRect(index % size, Math.floor(index / size), 1, 1);
-  });
+  if (context) drawPixels(context, drawing, 1);
   return canvas;
+};
+
+/** 가운데에서 크게 등장하는 중인 그림. 이동·밀어내기 대상에서 빠지고 맨 앞에 그려짐 */
+const isArriving = (sprite: Sprite, now: number) =>
+  sprite.isArrival && now >= sprite.bornAt && now - sprite.bornAt < ARRIVAL_DURATION;
+
+/** 등장을 마치고 무리에 섞여 돌아다니는 그림 */
+const isSettled = (sprite: Sprite, now: number) =>
+  now >= sprite.bornAt && !isArriving(sprite, now) && sprite.leftAt === null;
+
+/** 사라지는 중인 그림은 빼고 센 그림 수. 오래된 그림이 빠질 때 전체 크기가 출렁이지 않게 함 */
+const countActive = (sprites: Map<string, Sprite>) =>
+  [...sprites.values()].filter(({ leftAt }) => leftAt === null).length;
+
+/** 등장 애니메이션에 따른 현재 배율. 그릴 때와 눌렀는지 판정할 때 같은 크기를 씀 */
+const getSpriteScale = (sprite: Sprite, now: number) => {
+  const age = now - sprite.bornAt;
+  if (isArriving(sprite, now)) {
+    // 가운데에서 크게 튀어나와 잠시 머문 뒤, 무리 크기로 작아짐
+    if (age < 600) return ARRIVAL_SCALE * easeOutBack(age / 600);
+    if (age < 1600) return ARRIVAL_SCALE + Math.sin((age - 600) * 0.01) * 0.08;
+    return ARRIVAL_SCALE + (1 - ARRIVAL_SCALE) * easeInOut((age - 1600) / (ARRIVAL_DURATION - 1600));
+  }
+  if (!sprite.isArrival && age < ENTER_DURATION) return easeOutBack(age / ENTER_DURATION);
+  return 1;
 };
 
 const getContentBounds = ({ size, pixels }: Drawing) => {
@@ -124,6 +146,8 @@ const BoardScene = ({ drawings }: BoardSceneProps) => {
     width: 0,
     height: 0,
     hasLoaded: false,
+    /** 다음 새 그림이 등장할 수 있는 시각. 한 번에 여러 장이 들어와도 겹치지 않고 하나씩 등장함 */
+    nextArrivalAt: 0,
   });
 
   useEffect(() => {
@@ -169,8 +193,7 @@ const BoardScene = ({ drawings }: BoardSceneProps) => {
       const repelRadius = size * 1.6;
 
       sprites.forEach((sprite) => {
-        const age = now - sprite.bornAt;
-        if (age < 0 || (sprite.isArrival && age < ARRIVAL_DURATION)) return;
+        if (now < sprite.bornAt || isArriving(sprite, now)) return;
 
         sprite.heading += (Math.random() - 0.5) * WANDER * dt;
         // 화면 가장자리에 닿으면 가운데 쪽으로 방향을 틂
@@ -196,7 +219,7 @@ const BoardScene = ({ drawings }: BoardSceneProps) => {
 
         // 그림끼리 겹쳐 가려지지 않도록 가까우면 서로 밀어냄
         sprites.forEach((other) => {
-          if (other === sprite || now < other.bornAt) return;
+          if (other === sprite || now < other.bornAt || other.leftAt !== null) return;
           const dx = sprite.x - other.x;
           const dy = sprite.y - other.y;
           const distance = Math.hypot(dx, dy) || 1;
@@ -222,26 +245,17 @@ const BoardScene = ({ drawings }: BoardSceneProps) => {
     };
 
     const drawSprite = (sprite: Sprite, now: number, size: number) => {
-      const age = now - sprite.bornAt;
-      let { x, y } = sprite;
-      let scale = 1;
-
-      if (sprite.isArrival && age < ARRIVAL_DURATION) {
-        // 가운데에서 크게 튀어나와 잠시 머문 뒤, 무리 크기로 작아지며 제자리로 감
-        x = scene.width / 2;
-        y = scene.height / 2;
-        if (age >= 600 && !sprite.hasBurst) {
-          burst(x, y, sprite.colors, 40, now);
+      if (isArriving(sprite, now)) {
+        // 등장하는 동안은 화면 가운데에 머물고, 끝나면 그 자리에서 무리에 합류함
+        sprite.x = scene.width / 2;
+        sprite.y = scene.height / 2;
+        if (now - sprite.bornAt >= 600 && !sprite.hasBurst) {
+          burst(sprite.x, sprite.y, sprite.colors, 40, now);
           sprite.hasBurst = true;
         }
-        if (age < 600) scale = ARRIVAL_SCALE * easeOutBack(age / 600);
-        else if (age < 1600) scale = ARRIVAL_SCALE + Math.sin((age - 600) * 0.01) * 0.08;
-        else scale = ARRIVAL_SCALE + (1 - ARRIVAL_SCALE) * easeInOut((age - 1600) / (ARRIVAL_DURATION - 1600));
-        sprite.x = x;
-        sprite.y = y;
-      } else if (age < ENTER_DURATION) {
-        scale = easeOutBack(age / ENTER_DURATION);
       }
+      const { x, y } = sprite;
+      const scale = getSpriteScale(sprite, now);
 
       let alpha = 1;
       if (sprite.leftAt !== null) alpha = clamp(1 - (now - sprite.leftAt) / LEAVE_DURATION, 0, 1);
@@ -317,16 +331,15 @@ const BoardScene = ({ drawings }: BoardSceneProps) => {
       scene.sprites.forEach((sprite) => {
         if (sprite.leftAt !== null && now - sprite.leftAt > LEAVE_DURATION) scene.sprites.delete(sprite.id);
       });
-      const size = getSpriteSize(scene.width, scene.height, scene.sprites.size);
+      const size = getSpriteSize(scene.width, scene.height, countActive(scene.sprites));
 
       updateSprites(now, dt, size);
       context.imageSmoothingEnabled = false;
       drawBackground();
       // 아래쪽 그림이 앞에 보이도록 위에서부터 그림. 막 도착한 그림은 맨 앞에 둠
-      const isArriving = (sprite: Sprite) => sprite.isArrival && now - sprite.bornAt < ARRIVAL_DURATION;
       [...scene.sprites.values()]
         .filter((sprite) => now >= sprite.bornAt)
-        .sort((a, b) => Number(isArriving(a)) - Number(isArriving(b)) || a.y - b.y)
+        .sort((a, b) => Number(isArriving(a, now)) - Number(isArriving(b, now)) || a.y - b.y)
         .forEach((sprite) => drawSprite(sprite, now, size));
       drawEffects(now, dt, size);
 
@@ -355,13 +368,16 @@ const BoardScene = ({ drawings }: BoardSceneProps) => {
     const handlePointerDown = (event: PointerEvent) => {
       const point = toScenePoint(event);
       const now = performance.now();
-      const size = getSpriteSize(scene.width, scene.height, scene.sprites.size);
+      const size = getSpriteSize(scene.width, scene.height, countActive(scene.sprites));
 
-      // 앞에 그려진(아래쪽) 그림부터 눌렸는지 확인
+      // 그린 순서의 반대로(맨 앞에 보이는 그림부터) 눌렸는지 확인. 크게 떠 있는 도착 그림은 커진 크기로 판정
       const touched = [...scene.sprites.values()]
         .filter((sprite) => now >= sprite.bornAt && sprite.leftAt === null)
-        .sort((a, b) => b.y - a.y)
-        .find((sprite) => Math.abs(sprite.x - point.x) < size / 2 && Math.abs(sprite.y - point.y) < size / 2);
+        .sort((a, b) => Number(isArriving(b, now)) - Number(isArriving(a, now)) || b.y - a.y)
+        .find((sprite) => {
+          const half = (size * getSpriteScale(sprite, now)) / 2;
+          return Math.abs(sprite.x - point.x) < half && Math.abs(sprite.y - point.y) < half;
+        });
 
       if (touched) {
         touched.hopAt = now;
@@ -370,8 +386,10 @@ const BoardScene = ({ drawings }: BoardSceneProps) => {
       }
 
       // 빈 곳을 누르면 물결이 퍼지며 주변 그림이 놀라 흩어짐
+      // 아직 나타나지 않았거나 등장 중인 그림은 움직이지 않으므로, 힘이 쌓였다 한꺼번에 튀지 않게 뺌
       scene.ripples.push({ ...point, bornAt: now });
       scene.sprites.forEach((sprite) => {
+        if (!isSettled(sprite, now)) return;
         const dx = sprite.x - point.x;
         const dy = sprite.y - point.y;
         const distance = Math.hypot(dx, dy) || 1;
@@ -407,8 +425,11 @@ const BoardScene = ({ drawings }: BoardSceneProps) => {
     const isFirstLoad = !scene.hasLoaded;
     const size = getSpriteSize(scene.width, scene.height, drawings.length);
 
-    drawings.forEach((drawing, index) => {
-      if (scene.sprites.has(drawing.id)) return;
+    // 새 그림은 먼저 저장된 것부터 차례로 등장하도록 오래된 순으로 처리 (목록은 새것부터 정렬)
+    const added = drawings.filter(({ id }) => !scene.sprites.has(id));
+    (isFirstLoad ? added : [...added].reverse()).forEach((drawing, index) => {
+      const bornAt =isFirstLoad ? now + index * 60 : Math.max(now, scene.nextArrivalAt);
+      if (!isFirstLoad) scene.nextArrivalAt = bornAt + ARRIVAL_DURATION;
       const colors = [...new Set(drawing.pixels.filter((color): color is string => color !== null))].slice(0, 12);
       scene.sprites.set(drawing.id, {
         id: drawing.id,
@@ -421,7 +442,7 @@ const BoardScene = ({ drawings }: BoardSceneProps) => {
         vy: 0,
         heading: Math.random() * Math.PI * 2,
         phase: Math.random() * Math.PI * 2,
-        bornAt: isFirstLoad ? now + index * 60 : now,
+        bornAt,
         isArrival: !isFirstLoad,
         hasBurst: false,
         hopAt: null,
@@ -432,7 +453,8 @@ const BoardScene = ({ drawings }: BoardSceneProps) => {
     scene.sprites.forEach((sprite) => {
       if (!ids.has(sprite.id) && sprite.leftAt === null) sprite.leftAt = now;
     });
-    if (drawings.length > 0) scene.hasLoaded = true;
+    // 빈 보드로 시작했어도 그 뒤에 들어온 그림은 새 그림으로 등장해야 하므로 그림 수와 관계없이 표시
+    scene.hasLoaded = true;
   }, [drawings]);
 
   return <canvas ref={canvasRef} className="absolute inset-0 size-full touch-none" />;

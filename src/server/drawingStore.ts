@@ -1,4 +1,4 @@
-import { unstable_cache } from "next/cache";
+import { revalidateTag, unstable_cache } from "next/cache";
 import { BOARD_DRAWING_LIMIT } from "@/constants";
 import { type BoardDrawing, GRID_SIZE, type Drawing, type GridSize } from "@/types";
 import { getSupabase } from "./supabase";
@@ -11,9 +11,11 @@ const TABLE = "drawings";
 const DRAWING_CACHE_SECONDS = 60 * 60 * 24;
 /**
  * 보드에 띄울 최신 그림 목록을 캐시에 두는 시간(초). 보드를 띄운 화면이 여러 개이거나 누군가 API를 반복 호출해도
- * DB에는 이 간격으로만 접근함. 보드의 폴링 간격보다 짧게 둬서 새 그림이 늦게 뜨지 않게 함
+ * DB에는 이 간격으로만 접근함. 만료 뒤 첫 요청은 이전 목록을 받으므로(stale-while-revalidate),
+ * 새 그림은 저장할 때 RECENT_DRAWINGS_TAG로 캐시를 바로 지워 다음 폴링에서 받게 함
  */
 const RECENT_DRAWINGS_CACHE_SECONDS = 5;
+const RECENT_DRAWINGS_TAG = "recent-drawings";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
@@ -36,6 +38,13 @@ export const isValidDrawing = (value: unknown): value is Drawing => {
 export const insertDrawing = async ({ size, pixels }: Drawing): Promise<string> => {
   const { data, error } = await getSupabase().from(TABLE).insert({ size, pixels }).select("id").single();
   if (error) throw error;
+  // 보드가 이전 목록을 받지 않도록 바로 만료시켜, 다음 조회는 기다렸다가 새 목록을 받게 함
+  // 저장은 이미 끝났으므로 만료에 실패해도 오류로 돌려보내지 않음 (다시 시도하면 같은 그림이 두 번 저장됨)
+  try {
+    revalidateTag(RECENT_DRAWINGS_TAG, { expire: 0 });
+  } catch (error) {
+    console.error(error);
+  }
   return data.id;
 };
 
@@ -73,7 +82,7 @@ const selectRecentDrawings = unstable_cache(
       .map(({ id, size, pixels, created_at }) => ({ id, size, pixels, createdAt: created_at }));
   },
   [TABLE, "recent"],
-  { revalidate: RECENT_DRAWINGS_CACHE_SECONDS },
+  { revalidate: RECENT_DRAWINGS_CACHE_SECONDS, tags: [RECENT_DRAWINGS_TAG] },
 );
 
 /**
