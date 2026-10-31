@@ -20,7 +20,8 @@ const CONTROLS: Control[] = [
   { key: "centerX", label: "전체 좌우 위치", decrease: "왼쪽", increase: "오른쪽" },
   { key: "centerColumnGap", label: "2·3번째 열 사이 (모든 열이 함께 벌어짐)", decrease: "좁게", increase: "넓게" },
   { key: "columnGap", label: "1·2번째, 3·4번째 열 사이", decrease: "좁게", increase: "넓게" },
-  { key: "rowGap", label: "줄 간격 (3번째 줄 기준)", decrease: "좁게", increase: "넓게" },
+  { key: "rowGap", label: "줄 간격 (3번째 줄 기준, 모든 줄이 함께 벌어짐)", decrease: "좁게", increase: "넓게" },
+  { key: "outerRowGap", label: "1·2번째, 4·5번째 줄 사이", decrease: "좁게", increase: "넓게" },
 ];
 
 const formatMm = (value: number) => `${Number(value.toFixed(2))}mm`;

@@ -10,6 +10,8 @@ export interface LabelLayout {
   centerColumnGap: number;
   /** 가운데를 뺀 나머지 열 사이 간격 */
   columnGap: number;
-  /** 줄 사이 간격 */
+  /** 가운데 쪽 줄 사이 간격 */
   rowGap: number;
+  /** 맨 위·맨 아래 줄과 그 안쪽 줄 사이 간격 */
+  outerRowGap: number;
 }
