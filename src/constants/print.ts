@@ -17,9 +17,9 @@ export const LABEL_SHEET = {
 
 /**
  * 라벨지 규격 (mm). 지름 48mm 원형 라벨이 4열 × 5행으로 용지 한가운데에 놓여 있음
- * 원 사이 간격은 가로 2.5mm, 세로는 실제 인쇄물에 맞춰 3.5mm
+ * 원 사이 간격은 가로 2.5mm, 세로는 실제 인쇄물에 맞춰 4.5mm
  */
-const LABEL_PAPER = { diameter: 48, columnGap: 2.5, rowGap: 3.5 } as const;
+const LABEL_PAPER = { diameter: 48, columnGap: 2.5, rowGap: 4.5 } as const;
 
 /** 원 하나의 중심에서 옆·아래 원의 중심까지 */
 const LABEL_PITCH = {
