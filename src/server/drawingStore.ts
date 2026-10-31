@@ -6,9 +6,16 @@ import { getSupabase } from "./supabase";
 const TABLE = "drawings";
 /**
  * 공유 페이지 조회 결과를 캐시에 두는 시간(초). 저장된 그림은 바뀌지 않아 QR을 다시 찍어도 DB에 접근하지 않음
- * 나중에 그림을 지우는 정리 작업을 둔다면 보존 기간에 이 시간 이상 여유를 둬야 지운 그림이 캐시에서 나오지 않음
+ * 오래된 그림이 지워져도 이 시간 동안은 이미 연 적 있는 주소에서 캐시된 그림이 보일 수 있음
  */
 const DRAWING_CACHE_SECONDS = 60 * 60 * 24;
+/**
+ * DB에 남겨 두는 최대 그림 수. 넘치면 새 그림을 저장할 때 가장 오래된 그림부터 지움
+ * 32×32 그림 하나가 10KB 안팎이라 꽉 차도 10MB 정도
+ */
+const MAX_STORED_DRAWINGS = 1000;
+/** 한 번 저장할 때 지우는 최대 그림 수. 평소에는 1개씩 넘치므로 밀린 정리도 몇 번 저장하면 따라잡음 */
+const PRUNE_BATCH_SIZE = 100;
 /**
  * 보드에 띄울 최신 그림 목록을 캐시에 두는 시간(초). 보드를 띄운 화면이 여러 개이거나 누군가 API를 반복 호출해도
  * DB에는 이 간격으로만 접근함. 만료 뒤 첫 요청은 이전 목록을 받으므로(stale-while-revalidate),
@@ -34,10 +41,31 @@ export const isValidDrawing = (value: unknown): value is Drawing => {
   );
 };
 
+/** 최대 그림 수를 넘는 만큼 가장 오래된 그림부터 지움 */
+const pruneOldDrawings = async () => {
+  const { data, error } = await getSupabase()
+    .from(TABLE)
+    .select("id")
+    .order("created_at", { ascending: false })
+    .range(MAX_STORED_DRAWINGS, MAX_STORED_DRAWINGS + PRUNE_BATCH_SIZE - 1);
+  if (error) throw error;
+  if (data.length === 0) return;
+
+  const ids = data.map(({ id }) => id);
+  const { error: deleteError } = await getSupabase().from(TABLE).delete().in("id", ids);
+  if (deleteError) throw deleteError;
+};
+
 /** 그림을 저장하고 id를 반환 */
 export const insertDrawing = async ({ size, pixels }: Drawing): Promise<string> => {
   const { data, error } = await getSupabase().from(TABLE).insert({ size, pixels }).select("id").single();
   if (error) throw error;
+  // 저장은 이미 끝났으므로 정리에 실패해도 오류로 돌려보내지 않고 다음 저장 때 다시 정리함
+  try {
+    await pruneOldDrawings();
+  } catch (error) {
+    console.error("오래된 그림을 지우지 못했습니다.", error);
+  }
   // 보드가 이전 목록을 받지 않도록 바로 만료시켜, 다음 조회는 기다렸다가 새 목록을 받게 함
   // 저장은 이미 끝났으므로 만료에 실패해도 오류로 돌려보내지 않음 (다시 시도하면 같은 그림이 두 번 저장됨)
   try {
