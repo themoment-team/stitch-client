@@ -30,6 +30,7 @@ const PixelCanvas = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // 그리는 중인 포인터. 펜슬로 그리는 중 손바닥 터치 같은 다른 입력은 무시
   const activePointerIdRef = useRef<number | null>(null);
+  const activePointerTypeRef = useRef<string | null>(null);
   const lastCellRef = useRef<Cell | null>(null);
   // 캔버스 해상도를 실제 표시 크기 × 기기 픽셀 비율에 맞춰 격자선이 선명하게 보이도록 함
   const [resolution, setResolution] = useState(DEFAULT_RESOLUTION);
@@ -93,13 +94,19 @@ const PixelCanvas = ({
   const endStroke = () => {
     if (activePointerIdRef.current === null) return;
     activePointerIdRef.current = null;
+    activePointerTypeRef.current = null;
     lastCellRef.current = null;
     onStrokeEnd();
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const cell = getCell(event);
-    if (disabled || !cell || activePointerIdRef.current !== null) return;
+    if (disabled || !cell) return;
+    if (activePointerIdRef.current !== null) {
+      // 손바닥이 먼저 닿아 그리는 중이어도 펜슬이 닿으면 펜슬로 넘김. 그 밖의 다른 입력은 무시
+      if (event.pointerType !== "pen" || activePointerTypeRef.current === "pen") return;
+      endStroke();
+    }
 
     if (onFill) {
       onFill(toIndex(cell));
@@ -108,6 +115,7 @@ const PixelCanvas = ({
 
     event.currentTarget.setPointerCapture(event.pointerId);
     activePointerIdRef.current = event.pointerId;
+    activePointerTypeRef.current = event.pointerType;
     lastCellRef.current = cell;
     onStrokeStart();
     onPaint([toIndex(cell)]);
@@ -144,6 +152,9 @@ const PixelCanvas = ({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}
       onPointerCancel={handlePointerEnd}
+      // 길게 눌러 뜬 메뉴나 화면 가장자리 제스처처럼 pointerup 없이 포인터를 놓치는 경우가 있어,
+      // 그대로 두면 그리는 중으로 남아 이후 터치를 모두 무시하므로 획을 끝냄
+      onLostPointerCapture={handlePointerEnd}
       aria-label={`${size}×${size} 픽셀 그림판`}
     />
   );
