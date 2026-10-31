@@ -73,7 +73,8 @@ const DrawPage = ({
   // AI 도안을 기다리는 중에 화면을 떠나면 결과가 버려지고 횟수만 차감되므로 이전·다음 모두 잠금
   // 요청은 서버 타임아웃이 있어 반드시 끝나므로, 시간이 끝난 뒤에도 완료될 때까지 기다림
   // 시간이 끝나면 이전으로 돌아가 다시 그릴 수 없고, 빈 그림이어도 다음으로만 진행
-  const canGoNext = !isDraftLoading && (isOver || !isEmpty);
+  // 도안이 있으면 다음 단계에서 도안 그대로 출력할 수 있으므로 아직 그리지 않았어도 넘어갈 수 있음
+  const canGoNext = !isDraftLoading && (isOver || !isEmpty || guide !== null);
   const canGoBack = !isOver && !isDraftLoading;
 
   const handlePaint = (indices: number[]) => {
