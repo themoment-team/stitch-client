@@ -1,8 +1,9 @@
 import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RateLimitError, saveDrawing } from "@/apis";
-import { Icon, LabelSheet, PixelPreview, StepCard, StepHeader } from "@/components";
+import { Icon, LabelLayoutPanel, LabelSheet, PixelPreview, StepCard, StepHeader } from "@/components";
 import { PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
+import { useLabelLayout } from "@/hooks";
 import type { Drawing } from "@/types";
 import { drawingToPngDataUrl } from "@/utils";
 
@@ -38,6 +39,9 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
   const [qrCode, setQRCode] = useState<string | null>(null);
   // 개발 모드에서 effect가 두 번 실행되거나 다시 시도를 연달아 눌러도 한 번만 저장되도록 막음
   const isSavingRef = useRef(false);
+  const { layout, updateLayout, resetLayout } = useLabelLayout();
+  // 라벨지에 맞춰 인쇄 위치를 조정할 때만 주소에 ?calibrate를 붙여 조정 패널을 띄움 (출력 화면은 브라우저에서만 그려짐)
+  const [isCalibrating] = useState(() => new URLSearchParams(window.location.search).has("calibrate"));
 
   // 인쇄물에는 캔버스 대신 이미지로 넣어야 브라우저마다 픽셀이 번지지 않고 그대로 찍힘
   const drawingImage = useMemo(() => drawingToPngDataUrl(drawing), [drawing]);
@@ -169,10 +173,12 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
             </p>
           )}
         </div>
+
+        {isCalibrating && <LabelLayoutPanel layout={layout} onChange={updateLayout} onReset={resetLayout} />}
       </StepCard>
 
       {/* 인쇄할 때만 보이는 라벨지 출력물. 화면의 나머지는 globals.css의 인쇄 스타일에서 숨김 */}
-      {canPrint && <LabelSheet drawingImage={drawingImage} qrCode={qrCode} />}
+      {canPrint && <LabelSheet drawingImage={drawingImage} qrCode={qrCode} layout={layout} />}
     </>
   );
 };

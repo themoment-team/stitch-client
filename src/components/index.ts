@@ -1,6 +1,7 @@
 export { default as BoardScene } from "./BoardScene";
 export { default as ColorPalette } from "./ColorPalette";
 export { default as Icon } from "./Icon";
+export { default as LabelLayoutPanel } from "./LabelLayoutPanel";
 export { default as LabelSheet } from "./LabelSheet";
 export { default as PixelCanvas } from "./PixelCanvas";
 export { default as PixelPreview } from "./PixelPreview";
