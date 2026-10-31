@@ -17,15 +17,15 @@ export const LABEL_SHEET = {
 
 /**
  * 실제 인쇄물에 맞춰 보정한 기본 위치
- * 2·3번째 열과 3번째 줄을 기준으로 맞추고, 바깥 열·줄이 덜 벌어져 가운데 열 간격과 줄 간격을 넓힘
+ * 2·3번째 열과 3번째 줄을 기준으로 간격을 맞춤 (좌우 여백 26.5mm·29.5mm, 위아래 여백 32.5mm·36.5mm)
  * 프린터마다 밀리는 정도가 달라, 출력 화면 주소에 ?calibrate를 붙여 들어가면 직접 맞출 수 있음
  */
 export const DEFAULT_LABEL_LAYOUT: LabelLayout = {
   centerX: 103.5,
   centerY: 146.5,
-  centerColumnGap: 19,
-  columnGap: 17,
-  rowGap: 25,
+  centerColumnGap: 18,
+  columnGap: 16,
+  rowGap: 24.5,
 };
 
 /** 출력 화면에서 맞춘 위치를 그 기기에 저장해 두는 키 */
