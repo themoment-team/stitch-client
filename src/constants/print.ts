@@ -5,7 +5,7 @@ export const PAPER_SIZE = { width: 210, height: 297 } as const;
 
 /**
  * A4 한 장에 찍을 스티커 배치 (mm)
- * 26mm 스티커를 4열 × 5행(20개)으로 놓고, 오려 쓰기 편하도록 스티커 사이를 넉넉히 띄움
+ * 26mm 스티커를 4열 × 5행(20개)으로 놓음
  * 열은 짝수, 줄은 홀수여야 가운데 두 열 사이와 가운데 줄을 기준으로 펼칠 수 있음
  */
 export const LABEL_SHEET = {
@@ -16,16 +16,26 @@ export const LABEL_SHEET = {
 } as const;
 
 /**
- * 실제 인쇄물에 맞춰 보정한 기본 위치
- * 2·3번째 열과 3번째 줄을 기준으로 간격을 맞춤 (좌우 여백 31mm·34mm, 위아래 여백 34.5mm·38.5mm)
+ * 라벨지 규격 (mm). 지름 48mm 원형 라벨이 2.5mm씩 떨어져 4열 × 5행으로 용지 한가운데에 놓여 있음
+ */
+const LABEL_PAPER = { diameter: 48, gap: 2.5 } as const;
+
+/** 원 하나의 중심에서 다음 원의 중심까지 */
+const LABEL_PITCH = LABEL_PAPER.diameter + LABEL_PAPER.gap;
+
+/** 이 프린터가 전체를 오른쪽·아래로 밀어 찍는 거리. 그만큼 반대로 옮겨 찍음 */
+const PRINTER_OFFSET = { x: 2, y: 2 } as const;
+
+/**
+ * 기본 위치. 스티커 그림이 라벨지 원마다 정가운데에 오도록 원 중심 간격에 맞춤
  * 프린터마다 밀리는 정도가 달라, 출력 화면 주소에 ?calibrate를 붙여 들어가면 직접 맞출 수 있음
  */
 export const DEFAULT_LABEL_LAYOUT: LabelLayout = {
-  centerX: 103.5,
-  centerY: 146.5,
-  centerColumnGap: 15,
-  columnGap: 13,
-  rowGap: 23.5,
+  centerX: PAPER_SIZE.width / 2 - PRINTER_OFFSET.x,
+  centerY: PAPER_SIZE.height / 2 - PRINTER_OFFSET.y,
+  centerColumnGap: LABEL_PITCH - LABEL_SHEET.labelWidth,
+  columnGap: LABEL_PITCH - LABEL_SHEET.labelWidth,
+  rowGap: LABEL_PITCH - LABEL_SHEET.labelHeight,
 };
 
 /** 출력 화면에서 맞춘 위치를 그 기기에 저장해 두는 키 */
