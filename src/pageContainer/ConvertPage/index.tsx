@@ -8,13 +8,15 @@ import { isEmptyPixels } from "@/utils";
 interface ConvertPageProps {
   /** 그림판에서 그린 그림 */
   drawing: Drawing;
+  /** 그림판에서 만든 도안. 그림을 다 못 그렸어도 도안 그대로 출력할 수 있도록 함께 보여줌 */
+  guide: Drawing | null;
   /** 남은 AI 변환 횟수. 이전으로 갔다 와도 유지되도록 페이지에서 관리 */
   convertRemaining: number;
   /** 이전에 변환해 둔 결과 (같은 그림일 때만 전달) */
   initialSnapshot: ConvertSnapshot | null;
   onConverted: () => void;
   onBack: (snapshot: ConvertSnapshot) => void;
-  /** 선택한 그림(내 그림 또는 AI 변환)으로 다음 단계 진행. 돌아왔을 때를 위해 변환 결과도 함께 전달 */
+  /** 선택한 그림(내 그림, 도안 또는 AI 변환)으로 다음 단계 진행. 돌아왔을 때를 위해 변환 결과도 함께 전달 */
   onNext: (drawing: Drawing, snapshot: ConvertSnapshot) => void;
 }
 
@@ -60,8 +62,19 @@ const ChoiceCard = ({ title, className = "", selected, disabled = false, onSelec
   </button>
 );
 
+/** 처음 고를 그림. 고른 도안이 지워졌으면 내 그림으로, 아무것도 안 그렸는데 도안이 있으면 도안으로 */
+const getInitialChoice = (
+  snapshot: ConvertSnapshot | null,
+  guide: Drawing | null,
+  isEmptyDrawing: boolean,
+): ConvertChoice => {
+  if (snapshot) return snapshot.choice === "guide" && !guide ? "original" : snapshot.choice;
+  return guide && isEmptyDrawing ? "guide" : "original";
+};
+
 const ConvertPage = ({
   drawing,
+  guide,
   convertRemaining,
   initialSnapshot,
   onConverted,
@@ -70,7 +83,9 @@ const ConvertPage = ({
 }: ConvertPageProps) => {
   // AI가 다듬은 결과. 다시 다듬을 때마다 쌓이고, 사용자는 내 그림을 포함해 그중 하나를 고름
   const [results, setResults] = useState<Pixels[]>(initialSnapshot?.results ?? []);
-  const [choice, setChoice] = useState<ConvertChoice>(initialSnapshot?.choice ?? "original");
+  const [choice, setChoice] = useState<ConvertChoice>(() =>
+    getInitialChoice(initialSnapshot, guide, isEmptyPixels(drawing.pixels)),
+  );
   const [status, setStatus] = useState<ConvertStatus>("idle");
   // 화면이 갱신되기 전에 버튼을 연달아 눌러도 요청이 한 번만 가도록 막음 (비용·횟수 중복 방지)
   const isRequestingRef = useRef(false);
@@ -82,7 +97,9 @@ const ConvertPage = ({
   const canConvert = convertRemaining > 0 && !isLoading && !isEmptyDrawing;
   // 아직 결과가 없거나 다듬는 중이면 빈 카드 자리를 하나 더 보여줌
   const showPendingCard = !hasResult || isLoading;
-  const cardCount = 1 + results.length + (showPendingCard ? 1 : 0);
+  const cardCount = 1 + (guide ? 1 : 0) + results.length + (showPendingCard ? 1 : 0);
+  // 도안이 있으면 처음부터 고를 수 있는 그림이 둘이라, 다듬지 않아도 골라서 다음으로 넘어감
+  const hasChoices = hasResult || guide !== null;
 
   const handleConvert = async () => {
     if (!canConvert || isRequestingRef.current) return;
@@ -107,8 +124,14 @@ const ConvertPage = ({
   };
 
   const handleNext = () => {
-    const pixels = choice === "original" ? drawing.pixels : (results[choice] ?? drawing.pixels);
-    onNext({ size: drawing.size, pixels }, { results, choice });
+    const snapshot = { results, choice };
+    // 도안은 그림판 크기와 다를 수 있으므로 도안 크기 그대로 넘김
+    if (choice === "guide" && guide) {
+      onNext(guide, snapshot);
+      return;
+    }
+    const pixels = typeof choice === "number" ? (results[choice] ?? drawing.pixels) : drawing.pixels;
+    onNext({ size: drawing.size, pixels }, snapshot);
   };
 
   return (
@@ -119,7 +142,9 @@ const ConvertPage = ({
         description={
           hasResult
             ? "내 그림과 AI가 다듬은 그림을 비교하고 마음에 드는 걸 골라주세요."
-            : "원하면 AI가 내 그림을 더 깔끔하게 다듬어줘요."
+            : guide
+              ? "내 그림과 AI 도안 중 출력할 그림을 고르거나, AI로 내 그림을 다듬어보세요."
+              : "원하면 AI가 내 그림을 더 깔끔하게 다듬어줘요."
         }
         onBack={() => onBack({ results, choice })}
         backDisabled={isLoading}
@@ -133,6 +158,17 @@ const ConvertPage = ({
         <ChoiceCard title="내 그림" selected={choice === "original"} onSelect={() => setChoice("original")}>
           <PixelPreview drawing={drawing} label="내가 그린 그림" />
         </ChoiceCard>
+
+        {guide && (
+          <ChoiceCard
+            title="AI 도안"
+            selected={choice === "guide"}
+            disabled={isLoading}
+            onSelect={() => setChoice("guide")}
+          >
+            <PixelPreview drawing={guide} label="AI 도안" />
+          </ChoiceCard>
+        )}
 
         {results.map((pixels, index) => (
           <ChoiceCard
@@ -188,7 +224,7 @@ const ConvertPage = ({
             <Icon name="sparkles" className="size-4" />
             {hasResult ? "한 번 더 다듬기" : "AI로 다듬기"}
           </button>
-          {!hasResult && (
+          {!hasChoices && (
             <button type="button" onClick={handleNext} disabled={isLoading} className={SECONDARY_BUTTON_STYLES}>
               괜찮아요, 그대로 할게요
             </button>
@@ -230,7 +266,7 @@ const ConvertPage = ({
         )}
       </div>
 
-      {hasResult && (
+      {hasChoices && (
         <StepButton variant="next" onClick={handleNext} disabled={isLoading}>
           다음
         </StepButton>

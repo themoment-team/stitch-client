@@ -87,6 +87,7 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
       {step === STEP.CONVERT && drawing && (
         <ConvertPage
           drawing={drawing}
+          guide={guide}
           convertRemaining={convertRemaining}
           // 그림을 고치지 않았다면(같은 객체) 이전 변환 결과를 그대로 보여줌
           initialSnapshot={convertSnapshot?.source === drawing ? convertSnapshot.snapshot : null}
