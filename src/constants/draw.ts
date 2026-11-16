@@ -1,5 +1,8 @@
 export const DRAW_TIME_LIMIT = 300;
 
+/** 남은 시간이 이만큼(초) 되면 알림 모달을 띄움 */
+export const DRAW_TIME_WARNING = 60;
+
 export const HISTORY_LIMIT = 50;
 
 export const DRAFT_KEYWORD_MAX_LENGTH = 50;

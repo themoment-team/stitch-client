@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AIBlockedError, DraftLimitError, generateDraft, RateLimitError } from "@/apis";
 import {
   ColorPalette,
@@ -8,11 +8,13 @@ import {
   StepCard,
   StepHeader,
   Timer,
+  TimerModal,
   ToolButton,
 } from "@/components";
 import {
   AI_DRAFT_LIMIT,
   DRAFT_KEYWORD_MAX_LENGTH,
+  DRAW_TIME_WARNING,
   PALETTE,
   SMALL_PRIMARY_BUTTON_STYLES,
   SMALL_SECONDARY_BUTTON_STYLES,
@@ -40,6 +42,8 @@ const EMPTY_DRAWING: Drawing = {
   pixels: createEmptyPixels(GRID_SIZE.SMALL),
 };
 
+const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+
 type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "dailyLimit" | "error";
 
 const DrawPage = ({
@@ -61,6 +65,10 @@ const DrawPage = ({
   // 도안은 그림과 별도로 연하게 깔아 두고 따라 그리는 밑그림. 최종 그림에는 포함되지 않음
   const [guide, setGuide] = useState<Drawing | null>(initialGuide);
   const [isGuideVisible, setIsGuideVisible] = useState(true);
+  // 화면에 들어온 순간의 남은 시간. 이미 지난 알림(이전으로 갔다 왔을 때 등)은 다시 띄우지 않기 위해 씀
+  const [enteredRemaining] = useState(remaining);
+  const [isWarningClosed, setIsWarningClosed] = useState(false);
+  const [isOverModalClosed, setIsOverModalClosed] = useState(false);
   // 화면이 갱신되기 전에 생성 버튼을 연달아 눌러도 요청이 한 번만 가도록 막음 (비용·횟수 중복 방지)
   const isRequestingDraftRef = useRef(false);
 
@@ -75,6 +83,12 @@ const DrawPage = ({
   // 시간이 끝나면 이전으로 돌아가 다시 그릴 수 없고, 빈 그림이어도 다음으로만 진행
   const canGoNext = !isDraftLoading && (isOver || !isEmpty);
   const canGoBack = !isOver && !isDraftLoading;
+
+  const isWarningOpen =
+    !isWarningClosed && !isOver && enteredRemaining > DRAW_TIME_WARNING && remaining <= DRAW_TIME_WARNING;
+  const isOverModalOpen = !isOverModalClosed && isOver && enteredRemaining > 0;
+  const closeWarning = useCallback(() => setIsWarningClosed(true), []);
+  const closeOverModal = useCallback(() => setIsOverModalClosed(true), []);
 
   const handlePaint = (indices: number[]) => {
     paint(indices, tool === DRAW_TOOL.PEN ? color : null);
@@ -283,6 +297,32 @@ const DrawPage = ({
       <StepButton variant="next" onClick={() => onNext(drawing, guide)} disabled={!canGoNext}>
         다음
       </StepButton>
+
+      {isWarningOpen && (
+        <TimerModal
+          title={`${DRAW_TIME_WARNING / 60}분 남았어요`}
+          description="남은 시간 안에 그림을 마무리해주세요."
+          time={formatTime(remaining)}
+          urgent
+          onClose={closeWarning}
+          closeLabel="계속 그리기"
+        />
+      )}
+      {isOverModalOpen && (
+        <TimerModal
+          title="시간이 끝났어요"
+          description={
+            isDraftLoading
+              ? "AI 도안이 완성되면 다음 단계로 넘어갈 수 있어요."
+              : "그린 그림으로 다음 단계를 진행해주세요."
+          }
+          time={formatTime(0)}
+          urgent
+          onClose={closeOverModal}
+          closeLabel="그림 보기"
+          action={{ label: "다음 단계로", onClick: () => onNext(drawing, guide), disabled: !canGoNext }}
+        />
+      )}
     </StepCard>
   );
 };
