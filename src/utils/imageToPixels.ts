@@ -25,7 +25,7 @@ const luminance = ({ count, r, g, b }: ColorBucket) => (0.299 * r + 0.587 * g + 
 const mostCommon = (buckets: ColorBucket[]) =>
   buckets.reduce((best, bucket) => (bucket.count > best.count ? bucket : best));
 
-const loadImage = async (src: string) => {
+export const loadImage = async (src: string) => {
   const image = new Image();
   image.src = src;
   await image.decode();
