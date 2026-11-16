@@ -114,7 +114,7 @@ const ConvertPage = ({
   return (
     <StepCard size="wide">
       <StepHeader
-        current={2}
+        current={3}
         title="AI로 다듬으실 건가요?"
         description={
           hasResult

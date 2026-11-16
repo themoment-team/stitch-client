@@ -3,9 +3,17 @@
 import { useState } from "react";
 import { AI_CONVERT_LIMIT, AI_DRAFT_LIMIT, DRAW_TIME_LIMIT } from "@/constants";
 import { useConfirmBeforeUnload } from "@/hooks";
-import { ConvertPage, DrawPage, PrintPage, StartPage } from "@/pageContainer";
-import { type ConvertSnapshot, type Drawing, type Pixels, STEP, type Step } from "@/types";
-import { isEmptyPixels } from "@/utils";
+import { ConvertPage, DrawPage, PrintPage, SizePage, StartPage } from "@/pageContainer";
+import {
+  type ConvertSnapshot,
+  DEFAULT_GRID_SIZE,
+  type Drawing,
+  type GridSize,
+  type Pixels,
+  STEP,
+  type Step,
+} from "@/types";
+import { createEmptyPixels, isEmptyPixels } from "@/utils";
 
 interface StitchFlowProps {
   onRestart: () => void;
@@ -35,6 +43,15 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   useConfirmBeforeUnload(step !== STEP.START || hasWork);
 
   const handleStart = () => {
+    setStep(STEP.SIZE);
+  };
+
+  const handleSizeSelected = (size: GridSize) => {
+    // 다른 크기를 고르면 그리던 그림과 도안은 그 크기에 맞지 않으므로 새 캔버스로 시작
+    if (drawing?.size !== size) {
+      setDrawing({ size, pixels: createEmptyPixels(size) });
+      setGuide(null);
+    }
     setStep(STEP.DRAW);
   };
 
@@ -47,9 +64,9 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
     setGuide(currentGuide);
   };
 
-  const handleBackToStart = (currentDrawing: Drawing, currentGuide: Drawing | null) => {
+  const handleBackToSize = (currentDrawing: Drawing, currentGuide: Drawing | null) => {
     saveDrawing(currentDrawing, currentGuide);
-    setStep(STEP.START);
+    setStep(STEP.SIZE);
   };
 
   const handleDrawComplete = (completedDrawing: Drawing, currentGuide: Drawing | null) => {
@@ -83,7 +100,16 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
       {step === STEP.START && <StartPage onStart={handleStart} />}
-      {step === STEP.DRAW && (
+      {step === STEP.SIZE && (
+        <SizePage
+          initialSize={drawing?.size ?? DEFAULT_GRID_SIZE}
+          endAt={drawEndAt}
+          hasWork={hasWork}
+          onBack={() => setStep(STEP.START)}
+          onNext={handleSizeSelected}
+        />
+      )}
+      {step === STEP.DRAW && drawing && (
         <DrawPage
           endAt={drawEndAt}
           onTimerStart={handleTimerStart}
@@ -91,7 +117,7 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
           initialGuide={guide}
           aiDraftRemaining={aiDraftRemaining}
           onAIDraftUsed={handleAIDraftUsed}
-          onBack={handleBackToStart}
+          onBack={handleBackToSize}
           onNext={handleDrawComplete}
         />
       )}

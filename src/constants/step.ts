@@ -3,6 +3,10 @@ import { DRAW_TIME_LIMIT } from "./draw";
 /** 그림을 만드는 진행 단계. 시작 화면의 단계 안내와 각 화면의 단계 표시에 함께 씀 */
 export const STEPS = [
   {
+    title: "크기 고르기",
+    description: "캔버스 크기를 고르고 선을 그어 미리 써봐요.",
+  },
+  {
     title: "그리기",
     description: `${DRAW_TIME_LIMIT / 60}분 동안 픽셀 그림을 그려요.`,
   },
