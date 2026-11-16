@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { AI_CONVERT_LIMIT, AI_DRAFT_LIMIT, DRAW_TIME_LIMIT } from "@/constants";
+import { useConfirmBeforeUnload } from "@/hooks";
 import { ConvertPage, DrawPage, PrintPage, StartPage } from "@/pageContainer";
 import { type ConvertSnapshot, type Drawing, type Pixels, STEP, type Step } from "@/types";
+import { isEmptyPixels } from "@/utils";
 
 interface StitchFlowProps {
   onRestart: () => void;
@@ -26,6 +28,11 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   const [finalDrawing, setFinalDrawing] = useState<Drawing | null>(null);
   // DB에 저장한 그림과 id. 출력에서 이전으로 갔다가 같은 그림으로 돌아오면 다시 저장하지 않음
   const [saved, setSaved] = useState<{ pixels: Pixels; id: string } | null>(null);
+
+  // 단계를 진행 중이거나, 시작 화면으로 돌아왔어도 그려 둔 그림·도안이 남아 있으면 새로고침·페이지 이탈 전에 확인 창을 띄움
+  // 출력 단계는 그림이 DB에 저장된 뒤에도 켜 둠. 새로고침하면 출력 화면 자체가 처음으로 돌아가 다시 인쇄할 수 없기 때문
+  const hasWork = (drawing !== null && !isEmptyPixels(drawing.pixels)) || guide !== null;
+  useConfirmBeforeUnload(step !== STEP.START || hasWork);
 
   const handleStart = () => {
     setStep(STEP.DRAW);
