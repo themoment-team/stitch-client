@@ -6,7 +6,11 @@ interface UseImageDropOptions {
   onImage: (source: ImageSource) => void;
 }
 
-const DRAG_TYPES = ["Files", "text/uri-list", "text/html"];
+/**
+ * 이미지를 끌 때 담기는 형식. 글자만 끌 때도 text/html이 담기므로 그것만으로는 이미지로 보지 않음
+ * (검색어를 입력칸으로 끌어 넣는 일반 드롭은 브라우저가 그대로 처리)
+ */
+const DRAG_TYPES = ["Files", "text/uri-list"];
 const IMAGE_URL_PATTERN = /^(https?:|data:image\/)/i;
 
 const getImageFile = (data: DataTransfer) => [...data.files].find((file) => file.type.startsWith("image/"));

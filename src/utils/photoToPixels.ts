@@ -208,10 +208,6 @@ const quantize = (colors: RGB[], count: number): RGB[] => {
   return colors.map((color) => centers[nearest(color)]);
 };
 
-/**
- * 사용자가 고른 사진·그림을 size × size 도트 그림으로 변환
- * AI 결과와 달리 배경이 꽉 차 있고 색이 많으므로, 배경을 비우고 색 수를 줄여 도트 그림처럼 만듦
- */
 /** 배경을 비운 뒤 남는 칸들(대상)을 찾아 원본 이미지에서의 영역으로 돌려줌. 대상을 못 찾으면 이미지 전체 */
 const findSubjectArea = (image: HTMLImageElement): Area => {
   const { naturalWidth: width, naturalHeight: height } = image;

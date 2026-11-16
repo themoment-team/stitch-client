@@ -56,6 +56,8 @@ type ImageStatus = "idle" | "loading" | "unsupported" | "tooLarge" | "dailyLimit
 
 /** 이미지 검색 창이 화면에서 차지하는 너비 비율. 나머지 자리에 stitch 화면이 보여야 이미지를 끌어올 수 있음 */
 const SEARCH_WINDOW_WIDTH_RATIO = 0.4;
+/** 검색할 때마다 창이 쌓이지 않도록 같은 이름의 창을 다시 씀 */
+const SEARCH_WINDOW_NAME = "stitch-image-search";
 
 const inputStyles =
   "min-w-0 flex-1 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-ink shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] outline-none placeholder:font-normal placeholder:text-subtle focus-visible:ring-2 focus-visible:ring-(--accent-dark) disabled:opacity-40";
@@ -115,7 +117,8 @@ const DrawPage = ({
   };
 
   const handleImportImage = async (source: ImageSource) => {
-    if (isLocked || isConvertingImageRef.current) return;
+    // 도안은 하나만 깔리므로, 돌고 있는 AI 도안을 나중에 끝난 이미지가 덮어쓰지 않도록 함께 막음 (반대도 마찬가지)
+    if (isLocked || isConvertingImageRef.current || isRequestingDraftRef.current) return;
 
     // 변환하는 동안 캔버스 크기는 잠가 두므로 시작할 때의 크기로 만듦
     const { size } = drawing;
@@ -141,7 +144,10 @@ const DrawPage = ({
     }
   };
 
-  const { isDragging } = useImageDrop({ disabled: isLocked, onImage: handleImportImage });
+  const { isDragging } = useImageDrop({
+    disabled: isLocked || isDraftLoading || isImageLoading,
+    onImage: handleImportImage,
+  });
 
   const handleSearchImage = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -149,15 +155,15 @@ const DrawPage = ({
     if (!trimmedKeyword || isLocked) return;
 
     // 검색 결과의 이미지를 stitch 화면으로 끌어올 수 있도록 화면 오른쪽에 작은 창으로 띄움
-    // 검색 창에서 연 다른 사이트가 이 화면을 조작하지 못하도록 opener를 끊음
     const width = Math.round(window.screen.availWidth * SEARCH_WINDOW_WIDTH_RATIO);
     const height = window.screen.availHeight;
     const left = window.screen.availWidth - width;
-    window.open(
-      getImageSearchUrl(trimmedKeyword),
-      "stitch-image-search",
-      `popup,noopener,width=${width},height=${height},left=${left},top=0`,
-    );
+    // opener를 끊으면(noopener, opener = null) 브라우저가 이 창을 이름으로 다시 찾지도, 주소를 옮기거나 닫지도 못해
+    // 검색할 때마다 창이 쌓이므로 opener를 남겨 같은 창을 다시 씀
+    // 검색 결과에서 연 사이트는 구글이 새 탭(noopener)으로 열어, 이 화면에 닿을 수 있는 건 검색 창의 구글 페이지뿐임
+    window
+      .open(getImageSearchUrl(trimmedKeyword), SEARCH_WINDOW_NAME, `popup,width=${width},height=${height},left=${left},top=0`)
+      ?.focus();
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -170,7 +176,7 @@ const DrawPage = ({
   const handleGenerateDraft = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedKeyword = keyword.trim();
-    if (!trimmedKeyword || isLocked || isRequestingDraftRef.current) return;
+    if (!trimmedKeyword || isLocked || isRequestingDraftRef.current || isConvertingImageRef.current) return;
 
     const { size } = drawing;
     isRequestingDraftRef.current = true;
@@ -263,7 +269,7 @@ const DrawPage = ({
               />
               <button
                 type="submit"
-                disabled={isLocked || isDraftLoading || !keyword.trim()}
+                disabled={isLocked || isDraftLoading || isImageLoading || !keyword.trim()}
                 className={`${SMALL_PRIMARY_BUTTON_STYLES} shrink-0`}
               >
                 <Icon name="sparkles" className="size-4" />
@@ -344,7 +350,7 @@ const DrawPage = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isLocked || isImageLoading}
+                disabled={isLocked || isDraftLoading || isImageLoading}
                 className={SMALL_SECONDARY_BUTTON_STYLES}
               >
                 <Icon name="image" className="size-4" />
