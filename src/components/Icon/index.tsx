@@ -54,6 +54,19 @@ const ICON_PATHS = {
       <path d="M5 21h14" />
     </>
   ),
+  image: (
+    <>
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </>
+  ),
   clock: (
     <>
       <circle cx="12" cy="12" r="9" />
