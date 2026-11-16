@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AI_CONVERT_LIMIT, AI_DRAFT_LIMIT, DRAW_TIME_LIMIT } from "@/constants";
+import { usePreventUnload } from "@/hooks";
 import { ConvertPage, DrawPage, PrintPage, StartPage } from "@/pageContainer";
 import { type ConvertSnapshot, type Drawing, type Pixels, STEP, type Step } from "@/types";
 
@@ -26,6 +27,9 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   const [finalDrawing, setFinalDrawing] = useState<Drawing | null>(null);
   // DB에 저장한 그림과 id. 출력에서 이전으로 갔다가 같은 그림으로 돌아오면 다시 저장하지 않음
   const [saved, setSaved] = useState<{ pixels: Pixels; id: string } | null>(null);
+
+  // 단계를 진행 중이거나 그려 둔 그림이 있으면 새로고침·페이지 이탈로 작업이 날아가지 않도록 확인 창을 띄움
+  usePreventUnload(step !== STEP.START || drawing !== null);
 
   const handleStart = () => {
     setDrawEndAt((prev) => prev ?? Date.now() + DRAW_TIME_LIMIT * 1000);
