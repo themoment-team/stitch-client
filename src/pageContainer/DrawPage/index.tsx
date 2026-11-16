@@ -133,7 +133,7 @@ const DrawPage = ({
         title="자유롭게 그려보세요"
         onBack={() => onBack(drawing, guide)}
         backDisabled={!canGoBack}
-        aside={<Timer remaining={remaining} />}
+        aside={<Timer remaining={remaining} paused={!isStarted} />}
       />
 
       <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -151,6 +151,8 @@ const DrawPage = ({
             {!isStarted && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-3xl bg-background/70 p-6 text-center backdrop-blur-[2px]">
                 <p className="text-sm font-medium text-muted sm:text-base">
+                  아직 시간은 흐르지 않아요.
+                  <br />
                   시작을 누르면 {DRAW_TIME_LIMIT / 60}분 타이머가 시작돼요.
                 </p>
                 <button type="button" onClick={onTimerStart} className={`${PRIMARY_BUTTON_STYLES} min-w-32`}>
@@ -170,6 +172,11 @@ const DrawPage = ({
         </section>
 
         <aside className="mx-auto flex w-full max-w-[34rem] flex-col gap-6 text-left">
+          {!isStarted && (
+            <p className="text-sm font-medium text-muted" role="status">
+              타이머를 시작하면 도안·캔버스 크기·도구를 쓸 수 있어요.
+            </p>
+          )}
           <form className="flex flex-col gap-3" onSubmit={handleGenerateDraft}>
             <div className="flex items-center justify-between">
               <label htmlFor="draft-keyword" className="text-sm font-semibold text-muted">

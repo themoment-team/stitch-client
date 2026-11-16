@@ -12,15 +12,21 @@ export const useCountdown = (endAt: number | null, duration: number) => {
   );
 
   useEffect(() => {
-    // 시작 전에는 흐르지 않음. 시작 직후 남은 시간은 duration과 같아 첫 갱신까지 그대로 보여도 됨
+    // 시작 전에는 흐르지 않음
     if (endAt === null) return;
-    const timerId = setInterval(() => {
+    const tick = () => {
       const left = getRemainingSeconds(endAt);
       setRemaining(left);
       if (left === 0) clearInterval(timerId);
-    }, 250);
+    };
+    // 시작하자마자 endAt 기준으로 맞춰, 이미 흐른 endAt이 넘어와도 첫 주기 동안 duration이 보이지 않게 함
+    const syncId = setTimeout(tick, 0);
+    const timerId = setInterval(tick, 250);
 
-    return () => clearInterval(timerId);
+    return () => {
+      clearTimeout(syncId);
+      clearInterval(timerId);
+    };
   }, [endAt]);
 
   return { remaining, isOver: endAt !== null && remaining === 0 };
