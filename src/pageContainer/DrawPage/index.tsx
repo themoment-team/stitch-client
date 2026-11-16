@@ -465,6 +465,10 @@ const DrawPage = ({
               <ToolButton label="되돌리기" icon="undo" onClick={undo} disabled={isLocked || !canUndo} />
               <ToolButton label="초기화" icon="reset" onClick={reset} disabled={isLocked || isEmpty} />
             </div>
+            {/* 펜·채우기는 빈 칸에만 칠해지므로, 색을 바꾸는 방법을 미리 알려 줌 */}
+            <p className="text-xs font-medium text-subtle">
+              이미 칠한 칸은 지우개로 지운 뒤 다시 칠할 수 있어요
+            </p>
           </fieldset>
 
           <fieldset className="flex flex-col gap-3">
