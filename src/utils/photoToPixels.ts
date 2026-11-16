@@ -9,11 +9,14 @@ const SAMPLE_SCALE = 8;
 const OPAQUE_RATIO = 0.5;
 /** 칸에서 가장 큰 색 묶음이 이 비율 이상이어야 그 색을 대표 색으로 씀 */
 const DOMINANT_RATIO = 0.35;
-/** 크기별로 남길 색 수. 사진은 색이 수천 가지라 줄이지 않으면 도트 그림이 아니라 흐린 사진처럼 보임 */
-const COLOR_COUNT: Record<GridSize, number> = { 16: 8, 32: 14 };
+/**
+ * 크기별로 남길 색 수. 사진은 색이 수천 가지라 줄이지 않으면 도트 그림이 아니라 흐린 사진처럼 보임
+ * 캔버스가 클수록 칸이 많아 명암을 더 담을 수 있으므로 색을 더 남김
+ */
+const getColorCount = (size: GridSize) => (size <= 20 ? 8 : size <= 40 ? 14 : 20);
 const QUANTIZE_ITERATIONS = 8;
 /** 대상이 이미지의 어디에 있는지 찾을 때 쓰는 격자 크기. 여백을 칸 단위보다 촘촘하게 잘라내도록 결과보다 크게 잡음 */
-const LOCATE_SIZE = 64;
+const LOCATE_SIZE = 96;
 /**
  * 가장자리와 이어진 칸이 배경색과 이 거리 안이면 배경으로 보고 비움
  * 넉넉히 잡으면 흙바닥 위 동물처럼 배경과 비슷한 색의 대상까지 지워지므로, 거의 같은 색만 배경으로 봄
@@ -249,7 +252,7 @@ export const photoToPixels = async (src: string, size: GridSize): Promise<Pixels
   const filled = cells.flatMap((color, index) => (color ? [index] : []));
   const quantized = quantize(
     filled.map((index) => cells[index]!),
-    COLOR_COUNT[size],
+    getColorCount(size),
   );
 
   const pixels: Pixels = Array(cells.length).fill(null);

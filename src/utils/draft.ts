@@ -1,5 +1,5 @@
 import { DRAFT_LIBRARY } from "@/constants";
-import { GRID_SIZE, type DraftTemplate, type GridSize, type Pixels } from "@/types";
+import type { DraftTemplate, GridSize, Pixels } from "@/types";
 
 // 띄어쓰기와 대소문자만 무시 ("Ice Cream" = "icecream")
 const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, "");
@@ -19,15 +19,20 @@ export const findDraftByKeyword = (keyword: string): DraftTemplate | null =>
 
 /**
  * 도안을 캔버스 크기의 픽셀로 변환
- * 32×32 캔버스는 세밀하게 그린 rows32가 있으면 그대로 쓰고, 없으면 16×16 도안을 2배로 키움
+ * 도안은 16·32칸으로 그려 두었으므로 정수 배율로만 키우고 남는 칸은 여백으로 두어 가운데에 놓음 (칸이 찌그러지지 않음)
+ * 캔버스를 더 많이 채우는 쪽을 고르고, 같으면 세밀하게 그린 rows32를 씀
+ * (예: 40칸은 rows32 그대로, 60칸은 rows를 3배, 64칸은 rows32를 2배)
  */
 export const templateToPixels = ({ palette, rows, rows32 }: DraftTemplate, size: GridSize): Pixels => {
-  const source = size === GRID_SIZE.LARGE && rows32 ? rows32 : rows;
-  const scale = size / source.length;
+  const coverage = (source: string[]) => source.length * Math.floor(size / source.length);
+  const source = rows32 && coverage(rows32) >= coverage(rows) ? rows32 : rows;
+  const scale = Math.floor(size / source.length);
+  const offset = Math.floor((size - source.length * scale) / 2);
 
   return Array.from({ length: size * size }, (_, index) => {
-    const x = Math.floor((index % size) / scale);
-    const y = Math.floor(Math.floor(index / size) / scale);
+    const x = Math.floor(((index % size) - offset) / scale);
+    const y = Math.floor((Math.floor(index / size) - offset) / scale);
+    if (x < 0 || y < 0 || x >= source.length || y >= source.length) return null;
     return palette[source[y][x]] ?? null;
   });
 };

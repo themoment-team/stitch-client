@@ -1,6 +1,6 @@
 import { revalidateTag, unstable_cache } from "next/cache";
 import { BOARD_DRAWING_LIMIT } from "@/constants";
-import { type BoardDrawing, GRID_SIZE, type Drawing, type GridSize } from "@/types";
+import { type BoardDrawing, type Drawing, GRID_SIZES, type GridSize } from "@/types";
 import { getSupabase } from "./supabase";
 
 const TABLE = "drawings";
@@ -20,7 +20,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
 const isGridSize = (value: unknown): value is GridSize =>
-  Object.values(GRID_SIZE).includes(value as GridSize);
+  GRID_SIZES.includes(value as GridSize);
 
 /** 클라이언트에서 받은 값이 저장할 수 있는 그림인지 확인 (칸 수와 색 형식까지 검사) */
 export const isValidDrawing = (value: unknown): value is Drawing => {

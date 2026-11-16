@@ -7,8 +7,8 @@ interface PixelPreviewProps {
   label: string;
 }
 
-/** 16·32 모두 정수 배율로 나눠떨어져 칸 경계가 번지지 않는 해상도 */
-const RESOLUTION = 320;
+/** 고를 수 있는 캔버스 크기(16~64칸)가 모두 정수 배율로 나눠떨어져 칸 경계가 번지지 않는 해상도 */
+const RESOLUTION = 960;
 
 /** 픽셀 그림을 보여주기만 하는 읽기 전용 캔버스 */
 const PixelPreview = ({ drawing, label }: PixelPreviewProps) => {

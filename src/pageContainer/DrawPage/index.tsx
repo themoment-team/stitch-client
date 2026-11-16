@@ -34,7 +34,7 @@ import {
   SMALL_SECONDARY_BUTTON_STYLES,
 } from "@/constants";
 import { useCountdown, useDrawingHistory, useImageDrop } from "@/hooks";
-import { DRAW_TOOL, type Drawing, type DrawTool, GRID_SIZE } from "@/types";
+import { DEFAULT_GRID_SIZE, DRAW_TOOL, type Drawing, type DrawTool, GRID_SIZES } from "@/types";
 import { createEmptyPixels, isEmptyPixels } from "@/utils";
 
 interface DrawPageProps {
@@ -54,8 +54,8 @@ interface DrawPageProps {
 }
 
 const EMPTY_DRAWING: Drawing = {
-  size: GRID_SIZE.SMALL,
-  pixels: createEmptyPixels(GRID_SIZE.SMALL),
+  size: DEFAULT_GRID_SIZE,
+  pixels: createEmptyPixels(DEFAULT_GRID_SIZE),
 };
 
 type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "dailyLimit" | "error";
@@ -423,11 +423,11 @@ const DrawPage = ({
 
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-3 text-sm font-semibold text-muted">캔버스 크기</legend>
-            <div className="grid grid-cols-2 gap-3">
-              {Object.values(GRID_SIZE).map((size) => (
+            <div className="grid grid-cols-3 gap-3">
+              {GRID_SIZES.map((size) => (
                 <ToolButton
                   key={size}
-                  label={`${size} × ${size}`}
+                  label={`${size}×${size}`}
                   onClick={() => resize(size)}
                   active={drawing.size === size}
                   disabled={isLocked || isDraftLoading || isImageLoading}

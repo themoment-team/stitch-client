@@ -1,7 +1,7 @@
 import type { Drawing } from "@/types";
 
-/** 칸 경계가 또렷하게 보이도록 칸을 크게 키워 만들 이미지 크기 (16·32 모두 정수 배율) */
-const EXPORT_SIZE = 512;
+/** 칸 경계가 또렷하게 보이도록 칸을 크게 키워 만들 이미지 크기 (16~64칸 모든 캔버스 크기가 정수 배율) */
+const EXPORT_SIZE = 960;
 
 /** 색이 있는 칸을 cellSize 크기의 정사각형으로 캔버스에 칠함 (빈 칸은 건드리지 않음) */
 export const drawPixels = (context: CanvasRenderingContext2D, { size, pixels }: Drawing, cellSize: number) => {

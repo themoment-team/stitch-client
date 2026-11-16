@@ -1,7 +1,7 @@
 -- 출력 단계에서 저장하는 최종 그림. QR로 들어온 다운로드 페이지(/share/{id})에서 읽음
 create table if not exists public.drawings (
   id uuid primary key default gen_random_uuid(),
-  size smallint not null check (size in (16, 32)),
+  size smallint not null check (size in (16, 20, 32, 40, 60, 64)),
   -- 칸마다 색상(hex) 또는 빈 칸(null)을 담은 배열
   pixels jsonb not null,
   created_at timestamptz not null default now()
@@ -9,6 +9,10 @@ create table if not exists public.drawings (
 
 -- 정책을 두지 않아 공개 키(anon)로는 읽고 쓸 수 없고, 서버의 service role 키로만 접근
 alter table public.drawings enable row level security;
+
+-- 캔버스 크기를 16·32칸에서 16~64칸 6가지로 늘림. 이미 만든 테이블에도 적용되도록 제약을 다시 둠
+alter table public.drawings drop constraint if exists drawings_size_check;
+alter table public.drawings add constraint drawings_size_check check (size in (16, 20, 32, 40, 60, 64));
 
 -- 오래된 그림을 기간으로 찾아 정리할 때 전체를 훑지 않도록 저장 시각에 인덱스를 둠
 create index if not exists drawings_created_at_idx on public.drawings (created_at);
