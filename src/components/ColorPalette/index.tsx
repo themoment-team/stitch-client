@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { PALETTE } from "@/constants";
 
 interface ColorPaletteProps {
@@ -10,6 +11,18 @@ const selectedStyles = "ring-2 ring-ink ring-offset-2 ring-offset-background";
 
 const ColorPalette = ({ value, onChange, disabled = false }: ColorPaletteProps) => {
   const isCustom = !PALETTE.includes(value);
+  const colorInputRef = useRef<HTMLInputElement>(null);
+
+  // 선택기가 닫힐 때만 오는 기본 change 이벤트에서 포커스를 풀어,
+  // 그림판이 다음 클릭을 '선택기를 닫는 클릭'으로 여겨 무시하지 않도록 함 (React onChange는 input 이벤트라 직접 구독)
+  useEffect(() => {
+    const input = colorInputRef.current;
+    if (!input) return;
+
+    const handleClose = () => input.blur();
+    input.addEventListener("change", handleClose);
+    return () => input.removeEventListener("change", handleClose);
+  }, []);
 
   return (
     <div className={`grid grid-cols-6 justify-items-center gap-3 ${disabled ? "pointer-events-none opacity-40" : ""}`}>
@@ -38,6 +51,7 @@ const ColorPalette = ({ value, onChange, disabled = false }: ColorPaletteProps) 
           type="color"
           className="absolute inset-0 cursor-pointer opacity-0"
           value={value}
+          ref={colorInputRef}
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
         />

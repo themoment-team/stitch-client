@@ -18,6 +18,12 @@ const DEFAULT_RESOLUTION = 640;
 const GRID_LINE_COLOR = "rgba(34, 34, 34, 0.08)";
 const GUIDE_OPACITY = 0.3;
 
+/** 브라우저 기본 색상 선택기는 열려 있는 동안 색상 입력 칸에 포커스가 머묾 */
+const isColorPickerOpen = () => {
+  const element = document.activeElement;
+  return element instanceof HTMLInputElement && element.type === "color";
+};
+
 const PixelCanvas = ({
   drawing,
   guide = null,
@@ -98,6 +104,12 @@ const PixelCanvas = ({
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    // 색상 선택기가 열려 있는 동안의 클릭은 스포이드로 색을 찍거나 선택기를 닫으려는 것이라 칠하지 않음
+    if (isColorPickerOpen()) {
+      (document.activeElement as HTMLInputElement).blur();
+      return;
+    }
+
     const cell = getCell(event);
     if (disabled || !cell || activePointerIdRef.current !== null) return;
 
