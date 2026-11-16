@@ -22,9 +22,11 @@ import {
 import {
   AI_DRAFT_LIMIT,
   DRAFT_KEYWORD_MAX_LENGTH,
+  DRAW_TIME_LIMIT,
   getImageSearchUrl,
   IMAGE_SEARCH_KEYWORD_MAX_LENGTH,
   PALETTE,
+  PRIMARY_BUTTON_STYLES,
   SMALL_PRIMARY_BUTTON_STYLES,
   SMALL_SECONDARY_BUTTON_STYLES,
 } from "@/constants";
@@ -33,8 +35,10 @@ import { DRAW_TOOL, type Drawing, type DrawTool, GRID_SIZE } from "@/types";
 import { createEmptyPixels, isEmptyPixels } from "@/utils";
 
 interface DrawPageProps {
-  /** 제한 시간이 끝나는 시각(타임스탬프). 이전으로 갔다 와도 이어서 흐름 */
-  endAt: number;
+  /** 제한 시간이 끝나는 시각(타임스탬프). 이전으로 갔다 와도 이어서 흐름. 시작 전이면 null */
+  endAt: number | null;
+  /** 타이머 시작 버튼을 눌렀을 때 */
+  onTimerStart: () => void;
   /** 이전으로 갔다 돌아왔을 때 이어서 그릴 그림 */
   initialDrawing: Drawing | null;
   /** 이전으로 갔다 돌아왔을 때 다시 깔아 둘 도안 */
@@ -64,6 +68,7 @@ const inputStyles =
 
 const DrawPage = ({
   endAt,
+  onTimerStart,
   initialDrawing,
   initialGuide,
   aiDraftRemaining,
@@ -73,7 +78,7 @@ const DrawPage = ({
 }: DrawPageProps) => {
   const { drawing, canUndo, startStroke, paint, endStroke, fill, undo, reset, resize } =
     useDrawingHistory(initialDrawing ?? EMPTY_DRAWING);
-  const { remaining, isOver } = useCountdown(endAt);
+  const { remaining, isOver } = useCountdown(endAt, DRAW_TIME_LIMIT);
   const [tool, setTool] = useState<DrawTool>(DRAW_TOOL.PEN);
   const [color, setColor] = useState(PALETTE[0]);
   const [keyword, setKeyword] = useState("");
@@ -90,8 +95,10 @@ const DrawPage = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEmpty = isEmptyPixels(drawing.pixels);
+  const isStarted = endAt !== null;
+  // 타이머를 시작하기 전과 시간이 끝난 뒤에는 그리기 도구를 모두 잠금
   // AI가 도안을 그리는 동안에도 캔버스는 계속 쓸 수 있고, 도안 입력과 캔버스 크기만 잠금
-  const isLocked = isOver;
+  const isLocked = !isStarted || isOver;
   const isDraftLoading = draftStatus === "loading";
   const isImageLoading = imageStatus === "loading";
   // 도안은 만든 캔버스 크기에서만 보여줌 (크기를 바꿨다 되돌리면 다시 보임)
@@ -209,7 +216,7 @@ const DrawPage = ({
         title="자유롭게 그려보세요"
         onBack={() => onBack(drawing, guide)}
         backDisabled={!canGoBack}
-        aside={<Timer remaining={remaining} />}
+        aside={<Timer remaining={remaining} paused={!isStarted} />}
       />
 
       <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -236,6 +243,19 @@ const DrawPage = ({
                 </span>
               </div>
             )}
+            {!isStarted && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-3xl bg-background/70 p-6 text-center backdrop-blur-[2px]">
+                <p className="text-sm font-medium text-muted sm:text-base">
+                  아직 시간은 흐르지 않아요.
+                  <br />
+                  시작을 누르면 {DRAW_TIME_LIMIT / 60}분 타이머가 시작돼요.
+                </p>
+                <button type="button" onClick={onTimerStart} className={`${PRIMARY_BUTTON_STYLES} min-w-32`}>
+                  <Icon name="clock" className="size-5" />
+                  타이머 시작
+                </button>
+              </div>
+            )}
           </div>
           {isOver && (
             <p className="text-sm font-medium text-danger" role="status">
@@ -247,6 +267,11 @@ const DrawPage = ({
         </section>
 
         <aside className="mx-auto flex w-full max-w-[34rem] flex-col gap-6 text-left">
+          {!isStarted && (
+            <p className="text-sm font-medium text-muted" role="status">
+              타이머를 시작하면 도안·캔버스 크기·도구를 쓸 수 있어요.
+            </p>
+          )}
           <form className="flex flex-col gap-3" onSubmit={handleGenerateDraft}>
             <div className="flex items-center justify-between">
               <label htmlFor="draft-keyword" className="text-sm font-semibold text-muted">
