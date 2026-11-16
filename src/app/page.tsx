@@ -13,7 +13,7 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   const [step, setStep] = useState<Step>(STEP.START);
   const [drawing, setDrawing] = useState<Drawing | null>(null);
   const [guide, setGuide] = useState<Drawing | null>(null);
-  // 그림판 제한 시간은 처음 들어갈 때 한 번만 시작하고, 이전으로 갔다 와도 초기화하지 않음
+  // 그림판 제한 시간은 그림판에서 시작 버튼을 누를 때 한 번만 시작하고, 이전으로 갔다 와도 초기화하지 않음
   const [drawEndAt, setDrawEndAt] = useState<number | null>(null);
   // AI 사용 횟수도 이전으로 갔다 와도 초기화되지 않도록 여기서 관리
   const [aiDraftRemaining, setAIDraftRemaining] = useState(AI_DRAFT_LIMIT);
@@ -28,8 +28,11 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   const [saved, setSaved] = useState<{ pixels: Pixels; id: string } | null>(null);
 
   const handleStart = () => {
-    setDrawEndAt((prev) => prev ?? Date.now() + DRAW_TIME_LIMIT * 1000);
     setStep(STEP.DRAW);
+  };
+
+  const handleTimerStart = () => {
+    setDrawEndAt((prev) => prev ?? Date.now() + DRAW_TIME_LIMIT * 1000);
   };
 
   const saveDrawing = (currentDrawing: Drawing, currentGuide: Drawing | null) => {
@@ -73,9 +76,10 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
       {step === STEP.START && <StartPage onStart={handleStart} />}
-      {step === STEP.DRAW && drawEndAt !== null && (
+      {step === STEP.DRAW && (
         <DrawPage
           endAt={drawEndAt}
+          onTimerStart={handleTimerStart}
           initialDrawing={drawing}
           initialGuide={guide}
           aiDraftRemaining={aiDraftRemaining}
