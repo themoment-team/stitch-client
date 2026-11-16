@@ -1,10 +1,10 @@
 import { consumeQuota, tooManyRequests } from "@/server/rateLimit";
-import { GRID_SIZE, type GridSize } from "@/types";
+import type { GridSize } from "@/types";
 import { isGridSize, requestOpenAIImage } from "../_lib/openaiImage";
 import { payloadTooLarge, readJsonBody } from "../_lib/readJsonBody";
 
 const PNG_DATA_URL_PREFIX = "data:image/png;base64,";
-/** 512px로 키운 픽셀 그림은 수십 KB라 넉넉히 잡아도 1MB면 충분 */
+/** 960px로 키운 픽셀 그림은 수십 KB라 넉넉히 잡아도 1MB면 충분 */
 const MAX_IMAGE_BYTES = 1024 * 1024;
 /** MAX_IMAGE_BYTES를 base64로 바꾼 길이. 디코딩하기 전에 문자열 길이로 먼저 거름 */
 const MAX_BASE64_LENGTH = Math.ceil(MAX_IMAGE_BYTES / 3) * 4;
@@ -17,10 +17,11 @@ const OUTPUT_IMAGE_SIZE = 1024;
 // 형태를 그대로 두고 다듬게 하면 윤곽선만 덧붙이고 끝나므로,
 // 그림을 스케치로 보고 무엇을 그리려 했는지 파악해 완성된 그림으로 다시 그리도록 요청
 // (미완성 그림은 형태를 보완해 완성하고, 이미 완성된 그림은 더 높은 퀄리티로 끌어올림)
-// 16×16은 세부 묘사가 뭉개지므로 단순하게, 32×32는 명암까지 넣도록 크기별로 스타일을 나눔
-const STYLE: Record<GridSize, string> = {
-  [GRID_SIZE.SMALL]: "Very simple: bold silhouette, 3 to 6 colors, only essential features (e.g. dot eyes).",
-  [GRID_SIZE.LARGE]: "16-bit style: clear features, simple highlight and shadow, 6 to 12 colors.",
+// 작은 캔버스는 세부 묘사가 뭉개지므로 단순하게, 클수록 명암과 디테일을 더 넣도록 크기별로 스타일을 나눔
+const getStyle = (size: GridSize) => {
+  if (size <= 20) return "Very simple: bold silhouette, 3 to 6 colors, only essential features (e.g. dot eyes).";
+  if (size <= 40) return "16-bit style: clear features, simple highlight and shadow, 6 to 12 colors.";
+  return "Detailed 16-bit style: clear features, highlights and shading with a few tones, small details, 8 to 16 colors.";
 };
 
 // 결과는 imageToPixels에서 칸마다 대표 색 하나로 줄이므로
@@ -31,8 +32,8 @@ const buildPrompt = (size: GridSize) =>
 - If it is already finished, keep the design and raise the quality.
 - Keep the subject, pose and main colors; shape, size and position may change. No unrelated objects or text.
 - White outside the subject is background; white inside it (e.g. a white rabbit) stays white.
-- ${STYLE[size]} Dark outline, subject centered and filling most of the grid.
-- The grid fills the whole image with no margin: each pixel is a ${OUTPUT_IMAGE_SIZE / size}px square block of one flat color. No anti-aliasing or gradients. Transparent background, no shadow.`;
+- ${getStyle(size)} Dark outline, subject centered and filling most of the grid.
+- The grid fills the whole image with no margin: each pixel is a square block about ${Math.round(OUTPUT_IMAGE_SIZE / size)}px wide of one flat color. No anti-aliasing or gradients. Transparent background, no shadow.`;
 
 export async function POST(request: Request) {
   const parsed = await readJsonBody(request, MAX_BODY_BYTES);

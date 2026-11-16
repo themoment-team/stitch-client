@@ -2,8 +2,8 @@ import { findRecentDrawings, insertDrawing, isValidDrawing } from "@/server/draw
 import { consumeQuota, tooManyRequests } from "@/server/rateLimit";
 import { readJsonBody } from "../_lib/readJsonBody";
 
-/** 32×32 그림의 칸 1,024개가 모두 색(약 10바이트)이어도 약 10KB라 넉넉히 잡음 */
-const MAX_BODY_BYTES = 32 * 1024;
+/** 64×64 그림의 칸 4,096개가 모두 색(약 10바이트)이어도 약 41KB라 넉넉히 잡음 */
+const MAX_BODY_BYTES = 64 * 1024;
 
 /** 보드가 주기적으로 호출해 새로 저장된 그림을 받아감. ?after=ISO 시각을 주면 그 이후 그림만 반환 */
 export async function GET(request: Request) {

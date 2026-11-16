@@ -6,9 +6,9 @@ const SAMPLE_SCALE = 8;
 const OPAQUE_RATIO = 0.4;
 /**
  * 칸에서 어두운 색이 이 비율 이상이면 테두리로 보고 어두운 색을 씀
- * 32×32는 칸이 작아 테두리가 잘 살아남으므로 덜 적극적으로 적용
+ * 큰 캔버스는 칸이 작아 테두리가 잘 살아남으므로 덜 적극적으로 적용
  */
-const OUTLINE_RATIO: Record<GridSize, number> = { 16: 0.3, 32: 0.45 };
+const getOutlineRatio = (size: GridSize) => (size <= 20 ? 0.3 : size <= 40 ? 0.45 : 0.55);
 const DARK_LUMINANCE = 80;
 
 interface ColorBucket {
@@ -83,7 +83,7 @@ export const imageToPixels = async (src: string, size: GridSize): Promise<Pixels
       const darkBuckets = allBuckets.filter((bucket) => luminance(bucket) < DARK_LUMINANCE);
       const darkCount = darkBuckets.reduce((sum, bucket) => sum + bucket.count, 0);
       const chosen =
-        darkCount >= opaqueCount * OUTLINE_RATIO[size] ? mostCommon(darkBuckets) : mostCommon(allBuckets);
+        darkCount >= opaqueCount * getOutlineRatio(size) ? mostCommon(darkBuckets) : mostCommon(allBuckets);
 
       const { count, r, g, b } = chosen;
       pixels.push(`#${toHex(r / count)}${toHex(g / count)}${toHex(b / count)}`);
