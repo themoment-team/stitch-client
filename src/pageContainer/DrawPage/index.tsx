@@ -15,6 +15,7 @@ import {
   AI_DRAFT_LIMIT,
   DRAFT_KEYWORD_MAX_LENGTH,
   DRAW_TIME_WARNING,
+  DRAW_TIME_WARNING_MODAL_MS,
   PALETTE,
   SMALL_PRIMARY_BUTTON_STYLES,
   SMALL_SECONDARY_BUTTON_STYLES,
@@ -41,8 +42,6 @@ const EMPTY_DRAWING: Drawing = {
   size: GRID_SIZE.SMALL,
   pixels: createEmptyPixels(GRID_SIZE.SMALL),
 };
-
-const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
 type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "dailyLimit" | "error";
 
@@ -302,10 +301,12 @@ const DrawPage = ({
         <TimerModal
           title={`${DRAW_TIME_WARNING / 60}분 남았어요`}
           description="남은 시간 안에 그림을 마무리해주세요."
-          time={formatTime(remaining)}
+          remaining={remaining}
           urgent
           onClose={closeWarning}
           closeLabel="계속 그리기"
+          // 알림을 확인하는 동안에도 시간이 흐르므로 누르지 않아도 잠시 뒤 닫혀 그리기로 돌아가게 함
+          autoCloseMs={DRAW_TIME_WARNING_MODAL_MS}
         />
       )}
       {isOverModalOpen && (
@@ -316,7 +317,7 @@ const DrawPage = ({
               ? "AI 도안이 완성되면 다음 단계로 넘어갈 수 있어요."
               : "그린 그림으로 다음 단계를 진행해주세요."
           }
-          time={formatTime(0)}
+          remaining={0}
           urgent
           onClose={closeOverModal}
           closeLabel="그림 보기"
