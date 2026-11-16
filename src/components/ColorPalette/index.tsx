@@ -1,28 +1,35 @@
-import { useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { PALETTE } from "@/constants";
 
 interface ColorPaletteProps {
   value: string;
   onChange: (color: string) => void;
   disabled?: boolean;
+  /** 브라우저 기본 색상 선택기가 열리고 닫힐 때 */
+  onPickerOpenChange?: (open: boolean) => void;
 }
 
 const selectedStyles = "ring-2 ring-ink ring-offset-2 ring-offset-background";
 
-const ColorPalette = ({ value, onChange, disabled = false }: ColorPaletteProps) => {
+const ColorPalette = ({ value, onChange, disabled = false, onPickerOpenChange }: ColorPaletteProps) => {
   const isCustom = !PALETTE.includes(value);
-  const colorInputRef = useRef<HTMLInputElement>(null);
 
-  // 선택기가 닫힐 때만 오는 기본 change 이벤트에서 포커스를 풀어,
-  // 그림판이 다음 클릭을 '선택기를 닫는 클릭'으로 여겨 무시하지 않도록 함 (React onChange는 input 이벤트라 직접 구독)
-  useEffect(() => {
-    const input = colorInputRef.current;
-    if (!input) return;
+  // 선택기는 색을 확정하면 change, Esc·취소로 닫으면 cancel을 보냄 (React onChange는 input 이벤트라 직접 구독)
+  // 요소가 다시 붙어도 리스너가 따라가도록 ref 콜백으로 붙임
+  const colorInputRef = useCallback(
+    (input: HTMLInputElement | null) => {
+      if (!input || !onPickerOpenChange) return;
 
-    const handleClose = () => input.blur();
-    input.addEventListener("change", handleClose);
-    return () => input.removeEventListener("change", handleClose);
-  }, []);
+      const handleClose = () => onPickerOpenChange(false);
+      input.addEventListener("change", handleClose);
+      input.addEventListener("cancel", handleClose);
+      return () => {
+        input.removeEventListener("change", handleClose);
+        input.removeEventListener("cancel", handleClose);
+      };
+    },
+    [onPickerOpenChange],
+  );
 
   return (
     <div className={`grid grid-cols-6 justify-items-center gap-3 ${disabled ? "pointer-events-none opacity-40" : ""}`}>
@@ -53,6 +60,9 @@ const ColorPalette = ({ value, onChange, disabled = false }: ColorPaletteProps) 
           value={value}
           ref={colorInputRef}
           onChange={(event) => onChange(event.target.value)}
+          // Tab으로 포커스만 옮긴 경우는 열린 게 아니므로, 눌러서 선택기를 열 때만 열림으로 봄
+          // blur는 선택기가 별도 창으로 뜰 때(macOS 등) 열자마자 올 수 있어 닫힘 신호로 쓰지 않음
+          onClick={() => onPickerOpenChange?.(true)}
           disabled={disabled}
         />
         <span className="sr-only">색상 직접 선택</span>

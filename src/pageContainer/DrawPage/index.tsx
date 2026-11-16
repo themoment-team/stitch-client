@@ -84,6 +84,9 @@ const DrawPage = ({
   const { remaining, isOver } = useCountdown(endAt, DRAW_TIME_LIMIT);
   const [tool, setTool] = useState<DrawTool>(DRAW_TOOL.PEN);
   const [color, setColor] = useState(PALETTE[0]);
+  // 색상 선택기의 스포이드로 캔버스를 찍은 클릭이 펜으로 칠해지지 않도록 그림판에 알려 줌
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const closeColorPicker = useCallback(() => setIsColorPickerOpen(false), []);
   const [keyword, setKeyword] = useState("");
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
   // 도안은 그림과 별도로 연하게 깔아 두고 따라 그리는 밑그림. 최종 그림에는 포함되지 않음
@@ -243,6 +246,8 @@ const DrawPage = ({
               onPaint={handlePaint}
               onStrokeEnd={endStroke}
               onFill={tool === DRAW_TOOL.FILL ? handleFill : undefined}
+              isColorPickerOpen={isColorPickerOpen}
+              onColorPickerDismiss={closeColorPicker}
             />
             {/* 이미지를 끌어오는 중이거나 변환하는 중에는 캔버스 위에 안내를 띄움 */}
             {(isDragging || isImageLoading) && (
@@ -469,7 +474,12 @@ const DrawPage = ({
 
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
-            <ColorPalette value={color} onChange={handleColorChange} disabled={isLocked} />
+            <ColorPalette
+              value={color}
+              onChange={handleColorChange}
+              disabled={isLocked}
+              onPickerOpenChange={setIsColorPickerOpen}
+            />
           </fieldset>
         </aside>
       </div>
