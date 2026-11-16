@@ -1,5 +1,14 @@
 import { useRef, useState } from "react";
-import { AIBlockedError, DraftLimitError, generateDraft, RateLimitError } from "@/apis";
+import {
+  AIBlockedError,
+  convertImageToPixels,
+  DraftLimitError,
+  generateDraft,
+  ImageTooLargeError,
+  type ImageSource,
+  ImageUnsupportedError,
+  RateLimitError,
+} from "@/apis";
 import {
   ColorPalette,
   Icon,
@@ -13,11 +22,13 @@ import {
 import {
   AI_DRAFT_LIMIT,
   DRAFT_KEYWORD_MAX_LENGTH,
+  getImageSearchUrl,
+  IMAGE_SEARCH_KEYWORD_MAX_LENGTH,
   PALETTE,
   SMALL_PRIMARY_BUTTON_STYLES,
   SMALL_SECONDARY_BUTTON_STYLES,
 } from "@/constants";
-import { useCountdown, useDrawingHistory } from "@/hooks";
+import { useCountdown, useDrawingHistory, useImageDrop } from "@/hooks";
 import { DRAW_TOOL, type Drawing, type DrawTool, GRID_SIZE } from "@/types";
 import { createEmptyPixels, isEmptyPixels } from "@/utils";
 
@@ -41,6 +52,13 @@ const EMPTY_DRAWING: Drawing = {
 };
 
 type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "dailyLimit" | "error";
+type ImageStatus = "idle" | "loading" | "unsupported" | "tooLarge" | "dailyLimit" | "error";
+
+/** 이미지 검색 창이 화면에서 차지하는 너비 비율. 나머지 자리에 stitch 화면이 보여야 이미지를 끌어올 수 있음 */
+const SEARCH_WINDOW_WIDTH_RATIO = 0.4;
+
+const inputStyles =
+  "min-w-0 flex-1 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-ink shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] outline-none placeholder:font-normal placeholder:text-subtle focus-visible:ring-2 focus-visible:ring-(--accent-dark) disabled:opacity-40";
 
 const DrawPage = ({
   endAt,
@@ -63,11 +81,17 @@ const DrawPage = ({
   const [isGuideVisible, setIsGuideVisible] = useState(true);
   // 화면이 갱신되기 전에 생성 버튼을 연달아 눌러도 요청이 한 번만 가도록 막음 (비용·횟수 중복 방지)
   const isRequestingDraftRef = useRef(false);
+  const [imageKeyword, setImageKeyword] = useState("");
+  const [imageStatus, setImageStatus] = useState<ImageStatus>("idle");
+  // 변환이 끝나기 전에 다른 이미지를 또 넣으면 늦게 끝난 쪽이 덮어쓰므로 한 번에 하나만 변환
+  const isConvertingImageRef = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEmpty = isEmptyPixels(drawing.pixels);
   // AI가 도안을 그리는 동안에도 캔버스는 계속 쓸 수 있고, 도안 입력과 캔버스 크기만 잠금
   const isLocked = isOver;
   const isDraftLoading = draftStatus === "loading";
+  const isImageLoading = imageStatus === "loading";
   // 도안은 만든 캔버스 크기에서만 보여줌 (크기를 바꿨다 되돌리면 다시 보임)
   const visibleGuide = isGuideVisible && guide?.size === drawing.size ? guide.pixels : null;
   // AI 도안을 기다리는 중에 화면을 떠나면 결과가 버려지고 횟수만 차감되므로 이전·다음 모두 잠금
@@ -88,6 +112,59 @@ const DrawPage = ({
     setColor(nextColor);
     // 채우기 중에는 도구를 유지하고, 지우개일 때만 펜으로 바꿈
     if (tool === DRAW_TOOL.ERASER) setTool(DRAW_TOOL.PEN);
+  };
+
+  const handleImportImage = async (source: ImageSource) => {
+    if (isLocked || isConvertingImageRef.current) return;
+
+    // 변환하는 동안 캔버스 크기는 잠가 두므로 시작할 때의 크기로 만듦
+    const { size } = drawing;
+    isConvertingImageRef.current = true;
+    setImageStatus("loading");
+    try {
+      const pixels = await convertImageToPixels(source, size);
+      if (isEmptyPixels(pixels)) {
+        setImageStatus("unsupported");
+        return;
+      }
+      // 그림에 바로 칠하지 않고 AI 도안처럼 연하게 깔아 두어, 따라 그리며 내 그림으로 만들게 함
+      setGuide({ size, pixels });
+      setIsGuideVisible(true);
+      setImageStatus("idle");
+    } catch (error) {
+      if (error instanceof ImageUnsupportedError) setImageStatus("unsupported");
+      else if (error instanceof ImageTooLargeError) setImageStatus("tooLarge");
+      else if (error instanceof RateLimitError) setImageStatus("dailyLimit");
+      else setImageStatus("error");
+    } finally {
+      isConvertingImageRef.current = false;
+    }
+  };
+
+  const { isDragging } = useImageDrop({ disabled: isLocked, onImage: handleImportImage });
+
+  const handleSearchImage = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedKeyword = imageKeyword.trim();
+    if (!trimmedKeyword || isLocked) return;
+
+    // 검색 결과의 이미지를 stitch 화면으로 끌어올 수 있도록 화면 오른쪽에 작은 창으로 띄움
+    // 검색 창에서 연 다른 사이트가 이 화면을 조작하지 못하도록 opener를 끊음
+    const width = Math.round(window.screen.availWidth * SEARCH_WINDOW_WIDTH_RATIO);
+    const height = window.screen.availHeight;
+    const left = window.screen.availWidth - width;
+    window.open(
+      getImageSearchUrl(trimmedKeyword),
+      "stitch-image-search",
+      `popup,noopener,width=${width},height=${height},left=${left},top=0`,
+    );
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // 같은 파일을 다시 골라도 change가 일어나도록 비움
+    event.target.value = "";
+    if (file) handleImportImage(file);
   };
 
   const handleGenerateDraft = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -131,7 +208,7 @@ const DrawPage = ({
 
       <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <section className="flex flex-col items-center gap-3">
-          <div className="w-full max-w-[min(34rem,60dvh)] rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]">
+          <div className="relative w-full max-w-[min(34rem,60dvh)] rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]">
             <PixelCanvas
               drawing={drawing}
               guide={visibleGuide}
@@ -141,6 +218,18 @@ const DrawPage = ({
               onStrokeEnd={endStroke}
               onFill={tool === DRAW_TOOL.FILL ? handleFill : undefined}
             />
+            {/* 이미지를 끌어오는 중이거나 변환하는 중에는 캔버스 위에 안내를 띄움 */}
+            {(isDragging || isImageLoading) && (
+              <div
+                role={isImageLoading ? "status" : undefined}
+                className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-3xl bg-accent/85 text-ink"
+              >
+                <Icon name="image" className={`size-8 ${isImageLoading ? "animate-pulse" : ""}`} />
+                <span className="text-sm font-semibold">
+                  {isImageLoading ? "이미지를 도안으로 바꾸는 중이에요" : "여기에 놓으면 도안으로 깔려요"}
+                </span>
+              </div>
+            )}
           </div>
           {isOver && (
             <p className="text-sm font-medium text-danger" role="status">
@@ -170,7 +259,7 @@ const DrawPage = ({
                 placeholder="예) 웃는 고양이"
                 maxLength={DRAFT_KEYWORD_MAX_LENGTH}
                 disabled={isLocked || isDraftLoading}
-                className="min-w-0 flex-1 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-ink shadow-[3px_3px_6px_var(--neu-dark),-3px_-3px_6px_var(--neu-light)] outline-none placeholder:font-normal placeholder:text-subtle focus-visible:ring-2 focus-visible:ring-(--accent-dark) disabled:opacity-40"
+                className={inputStyles}
               />
               <button
                 type="submit"
@@ -227,6 +316,67 @@ const DrawPage = ({
             )}
           </form>
 
+          <form className="flex flex-col gap-3" onSubmit={handleSearchImage}>
+            <label htmlFor="image-keyword" className="text-sm font-semibold text-muted">
+              이미지로 그리기
+            </label>
+            <div className="flex gap-3">
+              <input
+                id="image-keyword"
+                type="text"
+                value={imageKeyword}
+                onChange={(event) => setImageKeyword(event.target.value)}
+                placeholder="예) 피카츄"
+                maxLength={IMAGE_SEARCH_KEYWORD_MAX_LENGTH}
+                disabled={isLocked}
+                className={inputStyles}
+              />
+              <button
+                type="submit"
+                disabled={isLocked || !imageKeyword.trim()}
+                className={`${SMALL_PRIMARY_BUTTON_STYLES} shrink-0`}
+              >
+                <Icon name="search" className="size-4" />
+                검색
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLocked || isImageLoading}
+                className={SMALL_SECONDARY_BUTTON_STYLES}
+              >
+                <Icon name="image" className="size-4" />
+                파일 올리기
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+            </div>
+            <p className="text-xs text-subtle">
+              검색 창의 이미지를 캔버스로 끌어오거나, 복사해서 Ctrl+V로 붙여넣으면 도안으로 깔려요.
+            </p>
+            {imageStatus === "unsupported" && (
+              <p className="text-xs font-medium text-danger" role="alert">
+                이 이미지는 불러올 수 없어요. 다른 이미지를 골라주세요.
+              </p>
+            )}
+            {imageStatus === "tooLarge" && (
+              <p className="text-xs font-medium text-danger" role="alert">
+                이미지가 너무 커요. 다른 이미지를 골라주세요.
+              </p>
+            )}
+            {imageStatus === "dailyLimit" && (
+              <p className="text-xs font-medium text-danger" role="alert">
+                오늘 이미지를 불러올 수 있는 횟수가 모두 찼어요. 파일로 올리거나 복사해서 붙여넣어주세요.
+              </p>
+            )}
+            {imageStatus === "error" && (
+              <p className="text-xs font-medium text-danger" role="alert">
+                이미지를 불러오지 못했어요. 다른 이미지를 고르거나, 복사해서 붙여넣어주세요.
+              </p>
+            )}
+          </form>
+
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-3 text-sm font-semibold text-muted">캔버스 크기</legend>
             <div className="grid grid-cols-2 gap-3">
@@ -236,7 +386,7 @@ const DrawPage = ({
                   label={`${size} × ${size}`}
                   onClick={() => resize(size)}
                   active={drawing.size === size}
-                  disabled={isLocked || isDraftLoading}
+                  disabled={isLocked || isDraftLoading || isImageLoading}
                 />
               ))}
             </div>
