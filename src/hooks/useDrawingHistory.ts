@@ -19,6 +19,7 @@ type DrawingAction =
   | { type: "FILL"; index: number; color: string }
   | { type: "UNDO" }
   | { type: "RESET" }
+  | { type: "RESET_ALL" }
   | { type: "RESIZE"; size: GridSize };
 
 const pushHistory = (history: Drawing[], drawing: Drawing) =>
@@ -96,6 +97,16 @@ const drawingReducer = (state: DrawingState, action: DrawingAction): DrawingStat
         strokeBase: null,
       };
 
+    case "RESET_ALL":
+      // 다른 크기에 보관해 둔 그림까지 모두 비움
+      if (isEmptyPixels(state.current.pixels) && Object.keys(state.stashed).length === 0) return state;
+      return {
+        current: { ...state.current, pixels: createEmptyPixels(state.current.size) },
+        history: pushHistory(state.history, state.current),
+        strokeBase: null,
+        stashed: {},
+      };
+
     case "RESIZE":
       if (action.size === state.current.size) return state;
       return {
@@ -130,6 +141,8 @@ export const useDrawingHistory = (initialDrawing: Drawing) => {
     fill: (index: number, color: string) => dispatch({ type: "FILL", index, color }),
     undo: () => dispatch({ type: "UNDO" }),
     reset: () => dispatch({ type: "RESET" }),
+    /** 지금 크기뿐 아니라 다른 크기에 보관해 둔 그림까지 모두 지움 */
+    resetAll: () => dispatch({ type: "RESET_ALL" }),
     resize: (size: GridSize) => dispatch({ type: "RESIZE", size }),
   };
 };
