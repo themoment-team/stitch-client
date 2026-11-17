@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   AIBlockedError,
   convertImageToPixels,
@@ -27,6 +27,7 @@ import {
   DRAW_TIME_WARNING,
   DRAW_TIME_WARNING_MODAL_MS,
   getStepNumber,
+  GUIDE_COLOR_LIMIT,
   getImageSearchUrl,
   IMAGE_SEARCH_KEYWORD_MAX_LENGTH,
   PALETTE,
@@ -36,7 +37,7 @@ import {
 } from "@/constants";
 import { useCountdown, useDrawingHistory, useImageDrop } from "@/hooks";
 import { DRAW_TOOL, type Drawing, type DrawTool, STEP } from "@/types";
-import { isEmptyPixels } from "@/utils";
+import { getMainColors, isEmptyPixels } from "@/utils";
 
 interface DrawPageProps {
   /** 제한 시간이 끝나는 시각(타임스탬프). 이전으로 갔다 와도 이어서 흐름. 시작 전이면 null */
@@ -105,6 +106,18 @@ const DrawPage = ({
   const isImageLoading = imageStatus === "loading";
   // 이 화면에서는 크기를 바꿀 수 없고, 크기 고르기에서 다른 크기를 고르면 페이지가 도안을 지우므로 도안은 늘 캔버스와 같은 크기
   const visibleGuide = isGuideVisible && guide ? guide.pixels : null;
+  // 도안에 쓰인 주요 색을 팔레트 아래에 따로 보여줘 따라 그릴 때 바로 고를 수 있게 함
+  // 기본 팔레트에 있는 색은 고르기 전에 빼야, 팔레트 색과 비슷한 도안 색이 팔레트 색에 합쳐져 함께 사라지지 않음
+  const guideColors = useMemo(
+    () =>
+      guide
+        ? getMainColors(
+            guide.pixels.filter((pixel) => pixel && !PALETTE.includes(pixel.toLowerCase())),
+            GUIDE_COLOR_LIMIT,
+          )
+        : [],
+    [guide],
+  );
   // AI 도안을 기다리는 중에 화면을 떠나면 결과가 버려지고 횟수만 차감되므로 이전·다음 모두 잠금
   // 요청은 서버 타임아웃이 있어 반드시 끝나므로, 시간이 끝난 뒤에도 완료될 때까지 기다림
   // 시간이 끝나면 이전으로 돌아가 다시 그릴 수 없고, 빈 그림이어도 다음으로만 진행
@@ -227,7 +240,8 @@ const DrawPage = ({
       />
 
       <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <section className="flex flex-col items-center gap-3">
+        {/* 넓은 화면에서는 오른쪽 패널을 내려도 캔버스가 화면에 남아 있도록 고정 */}
+        <section className="flex flex-col items-center gap-3 lg:sticky lg:top-6">
           <div className="relative w-full max-w-[min(34rem,60dvh)] rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]">
             <PixelCanvas
               drawing={drawing}
@@ -279,6 +293,50 @@ const DrawPage = ({
               타이머를 시작하면 도안·도구를 쓸 수 있어요.
             </p>
           )}
+          {/* 그리는 내내 쓰는 도구·색상을 위에 두어, 화면을 내리지 않고 색을 골라 바로 이어 그릴 수 있게 함
+              AI 도안·이미지 가져오기는 처음에 한 번 쓰는 기능이라 아래에 둠 */}
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-3 text-sm font-semibold text-muted">도구</legend>
+            <div className="grid grid-cols-3 gap-3">
+              <ToolButton
+                label="펜"
+                icon="pen"
+                onClick={() => setTool(DRAW_TOOL.PEN)}
+                active={tool === DRAW_TOOL.PEN}
+                disabled={isLocked}
+              />
+              <ToolButton
+                label="지우개"
+                icon="eraser"
+                onClick={() => setTool(DRAW_TOOL.ERASER)}
+                active={tool === DRAW_TOOL.ERASER}
+                disabled={isLocked}
+              />
+              <ToolButton
+                label="채우기"
+                icon="fill"
+                onClick={() => setTool(DRAW_TOOL.FILL)}
+                active={tool === DRAW_TOOL.FILL}
+                disabled={isLocked}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <ToolButton label="되돌리기" icon="undo" onClick={undo} disabled={isLocked || !canUndo} />
+              <ToolButton label="초기화" icon="reset" onClick={reset} disabled={isLocked || isEmpty} />
+            </div>
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
+            <ColorPalette
+              value={color}
+              onChange={handleColorChange}
+              suggestedColors={guideColors}
+              suggestedLabel="도안 색상"
+              disabled={isLocked}
+            />
+          </fieldset>
+
           <form className="flex flex-col gap-3" onSubmit={handleGenerateDraft}>
             <div className="flex items-center justify-between">
               <label htmlFor="draft-keyword" className="text-sm font-semibold text-muted">
@@ -410,41 +468,6 @@ const DrawPage = ({
             )}
           </form>
 
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">도구</legend>
-            <div className="grid grid-cols-3 gap-3">
-              <ToolButton
-                label="펜"
-                icon="pen"
-                onClick={() => setTool(DRAW_TOOL.PEN)}
-                active={tool === DRAW_TOOL.PEN}
-                disabled={isLocked}
-              />
-              <ToolButton
-                label="지우개"
-                icon="eraser"
-                onClick={() => setTool(DRAW_TOOL.ERASER)}
-                active={tool === DRAW_TOOL.ERASER}
-                disabled={isLocked}
-              />
-              <ToolButton
-                label="채우기"
-                icon="fill"
-                onClick={() => setTool(DRAW_TOOL.FILL)}
-                active={tool === DRAW_TOOL.FILL}
-                disabled={isLocked}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <ToolButton label="되돌리기" icon="undo" onClick={undo} disabled={isLocked || !canUndo} />
-              <ToolButton label="초기화" icon="reset" onClick={reset} disabled={isLocked || isEmpty} />
-            </div>
-          </fieldset>
-
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
-            <ColorPalette value={color} onChange={handleColorChange} disabled={isLocked} />
-          </fieldset>
         </aside>
       </div>
 

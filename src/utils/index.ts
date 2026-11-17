@@ -1,3 +1,4 @@
+export * from "./color";
 export * from "./draft";
 export * from "./drawingToImage";
 export * from "./imageToPixels";

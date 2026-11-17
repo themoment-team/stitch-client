@@ -1,7 +1,6 @@
 import type { GridSize, Pixels } from "@/types";
+import { colorDistance, type RGB } from "./color";
 import { loadImage } from "./imageToPixels";
-
-type RGB = [number, number, number];
 
 /** 한 칸을 몇 배로 크게 그려 칸 안의 대표 색을 고를지 */
 const SAMPLE_SCALE = 8;
@@ -28,15 +27,6 @@ const BACKGROUND_EDGE_RATIO = 0.6;
 const MIN_SUBJECT_RATIO = 0.08;
 
 const toHex = (value: number) => Math.round(value).toString(16).padStart(2, "0");
-
-/** 사람 눈에 가까운 색 거리 (빨강 비중을 평균 밝기에 따라 조정하는 redmean 근사) */
-const colorDistance = ([r1, g1, b1]: RGB, [r2, g2, b2]: RGB) => {
-  const meanRed = (r1 + r2) / 2;
-  const dr = r1 - r2;
-  const dg = g1 - g2;
-  const db = b1 - b2;
-  return Math.sqrt((2 + meanRed / 256) * dr * dr + 4 * dg * dg + (2 + (255 - meanRed) / 256) * db * db) / 3;
-};
 
 const averageColor = (colors: RGB[]): RGB => {
   const sum = colors.reduce<RGB>((acc, [r, g, b]) => [acc[0] + r, acc[1] + g, acc[2] + b], [0, 0, 0]);
