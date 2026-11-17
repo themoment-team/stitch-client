@@ -26,6 +26,7 @@ import {
   DRAW_TIME_LIMIT,
   DRAW_TIME_WARNING,
   DRAW_TIME_WARNING_MODAL_MS,
+  getStepNumber,
   getImageSearchUrl,
   IMAGE_SEARCH_KEYWORD_MAX_LENGTH,
   PALETTE,
@@ -34,7 +35,7 @@ import {
   SMALL_SECONDARY_BUTTON_STYLES,
 } from "@/constants";
 import { useCountdown, useDrawingHistory, useImageDrop } from "@/hooks";
-import { DRAW_TOOL, type Drawing, type DrawTool } from "@/types";
+import { DRAW_TOOL, type Drawing, type DrawTool, STEP } from "@/types";
 import { isEmptyPixels } from "@/utils";
 
 interface DrawPageProps {
@@ -102,8 +103,8 @@ const DrawPage = ({
   const isLocked = !isStarted || isOver;
   const isDraftLoading = draftStatus === "loading";
   const isImageLoading = imageStatus === "loading";
-  // 도안은 만든 캔버스 크기에서만 보여줌 (크기를 바꾸면 페이지에서 도안을 지우지만, 혹시 남아 있어도 어긋나게 깔리지 않도록 확인)
-  const visibleGuide = isGuideVisible && guide?.size === drawing.size ? guide.pixels : null;
+  // 이 화면에서는 크기를 바꿀 수 없고, 크기 고르기에서 다른 크기를 고르면 페이지가 도안을 지우므로 도안은 늘 캔버스와 같은 크기
+  const visibleGuide = isGuideVisible && guide ? guide.pixels : null;
   // AI 도안을 기다리는 중에 화면을 떠나면 결과가 버려지고 횟수만 차감되므로 이전·다음 모두 잠금
   // 요청은 서버 타임아웃이 있어 반드시 끝나므로, 시간이 끝난 뒤에도 완료될 때까지 기다림
   // 시간이 끝나면 이전으로 돌아가 다시 그릴 수 없고, 빈 그림이어도 다음으로만 진행
@@ -218,7 +219,7 @@ const DrawPage = ({
   return (
     <StepCard size="wide">
       <StepHeader
-        current={2}
+        current={getStepNumber(STEP.DRAW)}
         title="자유롭게 그려보세요"
         onBack={() => onBack(drawing, guide)}
         backDisabled={!canGoBack}

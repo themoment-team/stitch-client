@@ -47,8 +47,10 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   };
 
   const handleSizeSelected = (size: GridSize) => {
+    // 시간이 끝난 뒤에는 다시 그릴 수 없으므로, 크기가 달라도 그리던 그림을 지우지 않음 (크기 고르기 화면에서도 막음)
+    const isTimeOver = drawEndAt !== null && Date.now() >= drawEndAt;
     // 다른 크기를 고르면 그리던 그림과 도안은 그 크기에 맞지 않으므로 새 캔버스로 시작
-    if (drawing?.size !== size) {
+    if (drawing?.size !== size && !(isTimeOver && hasWork)) {
       setDrawing({ size, pixels: createEmptyPixels(size) });
       setGuide(null);
     }
@@ -97,10 +99,13 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
     if (finalDrawing) setSaved({ pixels: finalDrawing.pixels, id });
   };
 
+  // 그릴 그림 없이 그리기 단계가 되는 경로가 생겨도, 이전 버튼조차 없는 빈 화면 대신 크기 고르기를 보여줌
+  const shownStep = step === STEP.DRAW && !drawing ? STEP.SIZE : step;
+
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
-      {step === STEP.START && <StartPage onStart={handleStart} />}
-      {step === STEP.SIZE && (
+      {shownStep === STEP.START && <StartPage onStart={handleStart} />}
+      {shownStep === STEP.SIZE && (
         <SizePage
           initialSize={drawing?.size ?? DEFAULT_GRID_SIZE}
           endAt={drawEndAt}
@@ -109,7 +114,7 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
           onNext={handleSizeSelected}
         />
       )}
-      {step === STEP.DRAW && drawing && (
+      {shownStep === STEP.DRAW && drawing && (
         <DrawPage
           endAt={drawEndAt}
           onTimerStart={handleTimerStart}
@@ -121,7 +126,7 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
           onNext={handleDrawComplete}
         />
       )}
-      {step === STEP.CONVERT && drawing && (
+      {shownStep === STEP.CONVERT && drawing && (
         <ConvertPage
           drawing={drawing}
           convertRemaining={convertRemaining}
@@ -132,7 +137,7 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
           onNext={handleConvertComplete}
         />
       )}
-      {step === STEP.PRINT && finalDrawing && (
+      {shownStep === STEP.PRINT && finalDrawing && (
         <PrintPage
           drawing={finalDrawing}
           // 고른 그림이 같으면(같은 픽셀 배열) 저장해 둔 id를 그대로 씀
