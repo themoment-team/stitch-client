@@ -2,9 +2,9 @@ import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RateLimitError, saveDrawing } from "@/apis";
 import { Icon, LabelLayoutPanel, LabelSheet, PixelPreview, StepCard, StepHeader } from "@/components";
-import { PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
+import { getStepNumber, PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
 import { useLabelLayout } from "@/hooks";
-import type { Drawing } from "@/types";
+import { type Drawing, STEP } from "@/types";
 import { drawingToPngDataUrl } from "@/utils";
 
 interface PrintPageProps {
@@ -100,7 +100,7 @@ const PrintPage = ({ drawing, savedId, onSaved, onBack, onRestart }: PrintPagePr
     <>
       <StepCard size="wide">
         <StepHeader
-          current={3}
+          current={getStepNumber(STEP.PRINT)}
           title="스티커가 완성됐어요"
           description="인쇄물의 QR 코드를 찍으면 그림을 휴대폰에 저장할 수 있어요."
           onBack={onBack}

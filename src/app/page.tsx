@@ -2,8 +2,18 @@
 
 import { useState } from "react";
 import { AI_CONVERT_LIMIT, AI_DRAFT_LIMIT, DRAW_TIME_LIMIT } from "@/constants";
-import { ConvertPage, DrawPage, PrintPage, StartPage } from "@/pageContainer";
-import { type ConvertSnapshot, type Drawing, type Pixels, STEP, type Step } from "@/types";
+import { useConfirmBeforeUnload } from "@/hooks";
+import { ConvertPage, DrawPage, PrintPage, SizePage, StartPage } from "@/pageContainer";
+import {
+  type ConvertSnapshot,
+  DEFAULT_GRID_SIZE,
+  type Drawing,
+  type GridSize,
+  type Pixels,
+  STEP,
+  type Step,
+} from "@/types";
+import { createEmptyPixels, isEmptyPixels } from "@/utils";
 
 interface StitchFlowProps {
   onRestart: () => void;
@@ -13,7 +23,7 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   const [step, setStep] = useState<Step>(STEP.START);
   const [drawing, setDrawing] = useState<Drawing | null>(null);
   const [guide, setGuide] = useState<Drawing | null>(null);
-  // 그림판 제한 시간은 처음 들어갈 때 한 번만 시작하고, 이전으로 갔다 와도 초기화하지 않음
+  // 그림판 제한 시간은 그림판에서 시작 버튼을 누를 때 한 번만 시작하고, 이전으로 갔다 와도 초기화하지 않음
   const [drawEndAt, setDrawEndAt] = useState<number | null>(null);
   // AI 사용 횟수도 이전으로 갔다 와도 초기화되지 않도록 여기서 관리
   const [aiDraftRemaining, setAIDraftRemaining] = useState(AI_DRAFT_LIMIT);
@@ -27,9 +37,28 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
   // DB에 저장한 그림과 id. 출력에서 이전으로 갔다가 같은 그림으로 돌아오면 다시 저장하지 않음
   const [saved, setSaved] = useState<{ pixels: Pixels; id: string } | null>(null);
 
+  // 단계를 진행 중이거나, 시작 화면으로 돌아왔어도 그려 둔 그림·도안이 남아 있으면 새로고침·페이지 이탈 전에 확인 창을 띄움
+  // 출력 단계는 그림이 DB에 저장된 뒤에도 켜 둠. 새로고침하면 출력 화면 자체가 처음으로 돌아가 다시 인쇄할 수 없기 때문
+  const hasWork = (drawing !== null && !isEmptyPixels(drawing.pixels)) || guide !== null;
+  useConfirmBeforeUnload(step !== STEP.START || hasWork);
+
   const handleStart = () => {
-    setDrawEndAt((prev) => prev ?? Date.now() + DRAW_TIME_LIMIT * 1000);
+    setStep(STEP.SIZE);
+  };
+
+  const handleSizeSelected = (size: GridSize) => {
+    // 시간이 끝난 뒤에는 다시 그릴 수 없으므로, 크기가 달라도 그리던 그림을 지우지 않음 (크기 고르기 화면에서도 막음)
+    const isTimeOver = drawEndAt !== null && Date.now() >= drawEndAt;
+    // 다른 크기를 고르면 그리던 그림과 도안은 그 크기에 맞지 않으므로 새 캔버스로 시작
+    if (drawing?.size !== size && !(isTimeOver && hasWork)) {
+      setDrawing({ size, pixels: createEmptyPixels(size) });
+      setGuide(null);
+    }
     setStep(STEP.DRAW);
+  };
+
+  const handleTimerStart = () => {
+    setDrawEndAt((prev) => prev ?? Date.now() + DRAW_TIME_LIMIT * 1000);
   };
 
   const saveDrawing = (currentDrawing: Drawing, currentGuide: Drawing | null) => {
@@ -37,9 +66,9 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
     setGuide(currentGuide);
   };
 
-  const handleBackToStart = (currentDrawing: Drawing, currentGuide: Drawing | null) => {
+  const handleBackToSize = (currentDrawing: Drawing, currentGuide: Drawing | null) => {
     saveDrawing(currentDrawing, currentGuide);
-    setStep(STEP.START);
+    setStep(STEP.SIZE);
   };
 
   const handleDrawComplete = (completedDrawing: Drawing, currentGuide: Drawing | null) => {
@@ -70,21 +99,34 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
     if (finalDrawing) setSaved({ pixels: finalDrawing.pixels, id });
   };
 
+  // 그릴 그림 없이 그리기 단계가 되는 경로가 생겨도, 이전 버튼조차 없는 빈 화면 대신 크기 고르기를 보여줌
+  const shownStep = step === STEP.DRAW && !drawing ? STEP.SIZE : step;
+
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
-      {step === STEP.START && <StartPage onStart={handleStart} />}
-      {step === STEP.DRAW && drawEndAt !== null && (
+      {shownStep === STEP.START && <StartPage onStart={handleStart} />}
+      {shownStep === STEP.SIZE && (
+        <SizePage
+          initialSize={drawing?.size ?? DEFAULT_GRID_SIZE}
+          endAt={drawEndAt}
+          hasWork={hasWork}
+          onBack={() => setStep(STEP.START)}
+          onNext={handleSizeSelected}
+        />
+      )}
+      {shownStep === STEP.DRAW && drawing && (
         <DrawPage
           endAt={drawEndAt}
+          onTimerStart={handleTimerStart}
           initialDrawing={drawing}
           initialGuide={guide}
           aiDraftRemaining={aiDraftRemaining}
           onAIDraftUsed={handleAIDraftUsed}
-          onBack={handleBackToStart}
+          onBack={handleBackToSize}
           onNext={handleDrawComplete}
         />
       )}
-      {step === STEP.CONVERT && drawing && (
+      {shownStep === STEP.CONVERT && drawing && (
         <ConvertPage
           drawing={drawing}
           guide={guide}
@@ -96,7 +138,7 @@ const StitchFlow = ({ onRestart }: StitchFlowProps) => {
           onNext={handleConvertComplete}
         />
       )}
-      {step === STEP.PRINT && finalDrawing && (
+      {shownStep === STEP.PRINT && finalDrawing && (
         <PrintPage
           drawing={finalDrawing}
           // 고른 그림이 같으면(같은 픽셀 배열) 저장해 둔 id를 그대로 씀

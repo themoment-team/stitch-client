@@ -12,6 +12,10 @@ interface PixelCanvasProps {
   onStrokeEnd: () => void;
   /** 지정하면 획 대신 누른 칸에서 채우기만 함 */
   onFill?: (index: number) => void;
+  /** 브라우저 기본 색상 선택기가 열려 있는지. 열려 있는 동안 누른 칸은 칠하지 않음 */
+  isColorPickerOpen?: boolean;
+  /** 선택기가 열려 있는 동안 캔버스를 눌렀을 때. 그 클릭으로 선택기는 닫힌 것으로 봄 */
+  onColorPickerDismiss?: () => void;
 }
 
 const DEFAULT_RESOLUTION = 640;
@@ -26,6 +30,8 @@ const PixelCanvas = ({
   onPaint,
   onStrokeEnd,
   onFill,
+  isColorPickerOpen = false,
+  onColorPickerDismiss,
 }: PixelCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // 그리는 중인 포인터. 펜슬로 그리는 중 손바닥 터치 같은 다른 입력은 무시
@@ -100,6 +106,13 @@ const PixelCanvas = ({
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    // 선택기가 열려 있는 동안의 클릭은 스포이드로 색을 찍거나 선택기를 닫으려는 것이라 칠하지 않음
+    // 포커스를 직접 풀면 스포이드 색이 확정되기 전에 선택기가 닫힐 수 있어 상태만 닫힘으로 바꿈
+    if (isColorPickerOpen) {
+      onColorPickerDismiss?.();
+      return;
+    }
+
     const cell = getCell(event);
     if (disabled || !cell) return;
     if (activePointerIdRef.current !== null) {

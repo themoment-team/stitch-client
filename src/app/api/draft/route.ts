@@ -1,6 +1,6 @@
 import { DRAFT_KEYWORD_MAX_LENGTH } from "@/constants";
 import { consumeQuota, tooManyRequests } from "@/server/rateLimit";
-import { GRID_SIZE, type GridSize } from "@/types";
+import type { GridSize } from "@/types";
 import { isGridSize, requestOpenAIImage } from "../_lib/openaiImage";
 import { readJsonBody } from "../_lib/readJsonBody";
 
@@ -11,19 +11,25 @@ const MAX_BODY_BYTES = 2 * 1024;
 const KOREAN_NOTE = `The subject is written in Korean; interpret it the way a Korean speaker would (e.g. "치킨" means fried chicken).`;
 
 // 캔버스 크기에 맞춰 그리게 해야 픽셀로 줄였을 때 형태가 살아남음
-// 16×16은 세부 묘사가 모두 뭉개지므로 처음부터 16칸짜리 단순한 스프라이트로 요청
-// 32×32도 격자를 정해 주지 않으면 큼직한 블록으로 그려서 줄였을 때 16칸 그림처럼 보이므로 32칸 격자로 요청
-const PROMPTS: Record<GridSize, (keyword: string) => string> = {
-  [GRID_SIZE.SMALL]: (keyword) =>
-    `A tiny 16x16 pixel art sprite of "${keyword}", drawn on a 16 by 16 grid where every pixel is a huge square block.
+// 캔버스 크기에 맞춰 그리게 해야 픽셀로 줄였을 때 형태가 살아남음
+// 20칸 이하는 세부 묘사가 모두 뭉개지므로 처음부터 단순한 스프라이트로 요청하고,
+// 그보다 크면 격자를 정해 주지 않을 때 큼직한 블록으로 그려 줄였을 때 작은 그림처럼 보이므로 캔버스 크기의 격자로 요청
+const buildPrompt = (keyword: string, size: GridSize) => {
+  const grid = `${size}x${size}`;
+  if (size <= 20) {
+    return `A tiny ${grid} pixel art sprite of "${keyword}", drawn on a ${size} by ${size} grid where every pixel is a huge square block.
 Cute and extremely simple: a bold silhouette, a 1-pixel dark outline, 3 to 5 flat colors, only the most essential features (e.g. two dot eyes). No anti-aliasing, no gradients, no small details.
 One subject centered and filling the whole grid. Transparent background, no text, no shadow.
-${KOREAN_NOTE}`,
-  [GRID_SIZE.LARGE]: (keyword) =>
-    `A cute 32x32 pixel art sprite of "${keyword}", drawn on a 32 by 32 grid where every pixel is a large square block.
-Use the full 32x32 resolution: a 1-pixel dark outline, clear recognizable features and a few simple details, 5 to 8 flat colors. No anti-aliasing, no gradients.
+${KOREAN_NOTE}`;
+  }
+  const detail =
+    size <= 40
+      ? "clear recognizable features and a few simple details, 5 to 8 flat colors"
+      : "detailed features, simple shading with a few tones per color, 8 to 16 flat colors";
+  return `A cute ${grid} pixel art sprite of "${keyword}", drawn on a ${size} by ${size} grid where every pixel is a square block.
+Use the full ${grid} resolution: a 1-pixel dark outline, ${detail}. No anti-aliasing, no gradients.
 One subject centered and filling the whole grid, facing the viewer. Transparent background, no text, no shadow, no border.
-${KOREAN_NOTE}`,
+${KOREAN_NOTE}`;
 };
 
 export async function POST(request: Request) {
@@ -45,5 +51,5 @@ export async function POST(request: Request) {
 
   if (!(await consumeQuota("ai", request))) return tooManyRequests();
 
-  return requestOpenAIImage("generations", { prompt: PROMPTS[size](keyword) });
+  return requestOpenAIImage("generations", { prompt: buildPrompt(keyword, size) });
 }

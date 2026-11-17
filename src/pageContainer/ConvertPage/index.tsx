@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { AIBlockedError, convertDrawing, RateLimitError } from "@/apis";
 import { Icon, PixelPreview, StepButton, StepCard, StepHeader } from "@/components";
-import { AI_CONVERT_LIMIT, PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
-import type { ConvertChoice, ConvertSnapshot, Drawing, Pixels } from "@/types";
+import { AI_CONVERT_LIMIT, getStepNumber, PRIMARY_BUTTON_STYLES, SECONDARY_BUTTON_STYLES } from "@/constants";
+import { type ConvertChoice, type ConvertSnapshot, type Drawing, type Pixels, STEP } from "@/types";
 import { isEmptyPixels } from "@/utils";
 
 interface ConvertPageProps {
@@ -137,7 +137,7 @@ const ConvertPage = ({
   return (
     <StepCard size="wide">
       <StepHeader
-        current={2}
+        current={getStepNumber(STEP.CONVERT)}
         title="AI로 다듬으실 건가요?"
         description={
           hasResult

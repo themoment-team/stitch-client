@@ -1,11 +1,11 @@
-import { GRID_SIZE, type GridSize } from "@/types";
+import { GRID_SIZES, type GridSize } from "@/types";
 
 const OPENAI_URL = "https://api.openai.com/v1/images";
 // 배포 환경에 빈 값으로 등록돼도 기본 모델을 쓰도록 빈 문자열도 기본값으로 처리
 const MODEL = process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-2.5-flare-2026-09-08";
 const TIMEOUT_MS = 60_000;
 
-// 어차피 16·32칸으로 줄이므로 가장 빠르고 저렴한 품질로 충분하고,
+// 어차피 16~64칸으로 줄이므로 가장 빠르고 저렴한 품질로 충분하고,
 // png는 1.7MB 정도라 투명 배경을 유지하면서 훨씬 가벼운 webp(약 100KB)로 받음
 const OUTPUT_OPTIONS = {
   size: "1024x1024",
@@ -34,7 +34,7 @@ interface OpenAIErrorResponse {
 }
 
 export const isGridSize = (value: unknown): value is GridSize =>
-  Object.values(GRID_SIZE).includes(value as GridSize);
+  GRID_SIZES.includes(value as GridSize);
 
 /**
  * OpenAI 이미지 API를 호출하고 결과를 그대로 클라이언트에 돌려줄 Response로 만듦

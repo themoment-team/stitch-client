@@ -10,4 +10,5 @@ export { default as StepCard } from "./StepCard";
 export { default as StepHeader } from "./StepHeader";
 export { default as StepIndicator } from "./StepIndicator";
 export { default as Timer } from "./Timer";
+export { default as TimerModal } from "./TimerModal";
 export { default as ToolButton } from "./ToolButton";
