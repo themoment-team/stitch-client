@@ -56,3 +56,34 @@ export const getLineCells = (from: Cell, to: Cell): Cell[] => {
 
   return cells;
 };
+
+/**
+ * 서로 이만큼 가까운 색(RGB 거리)은 같은 색으로 보고 하나만 남김
+ * AI 도안은 칸마다 평균 색을 쓰므로 경계 칸에서 눈으로는 구분되지 않는 비슷한 색이 여러 개 생김
+ */
+const SIMILAR_COLOR_DISTANCE = 24;
+
+const hexToRgb = (hex: string) => [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16));
+
+const isSimilarColor = (a: string, b: string) => {
+  const [r1, g1, b1] = hexToRgb(a);
+  const [r2, g2, b2] = hexToRgb(b);
+  return Math.hypot(r1 - r2, g1 - g2, b1 - b2) < SIMILAR_COLOR_DISTANCE;
+};
+
+/** 그림에 쓰인 색을 많이 쓰인 순서로 최대 limit개 반환. 비슷한 색은 더 많이 쓰인 하나만 남김 */
+export const getMainColors = (pixels: Pixels, limit: number): string[] => {
+  const counts = new Map<string, number>();
+  pixels.forEach((color) => {
+    if (!color) return;
+    const key = color.toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  });
+
+  const colors: string[] = [];
+  for (const [color] of [...counts].sort((a, b) => b[1] - a[1])) {
+    if (colors.length >= limit) break;
+    if (!colors.some((picked) => isSimilarColor(picked, color))) colors.push(color);
+  }
+  return colors;
+};

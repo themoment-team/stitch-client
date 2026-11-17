@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   AIBlockedError,
   convertImageToPixels,
@@ -27,6 +27,7 @@ import {
   DRAW_TIME_WARNING,
   DRAW_TIME_WARNING_MODAL_MS,
   getStepNumber,
+  GUIDE_COLOR_LIMIT,
   getImageSearchUrl,
   IMAGE_SEARCH_KEYWORD_MAX_LENGTH,
   PALETTE,
@@ -36,7 +37,7 @@ import {
 } from "@/constants";
 import { useCountdown, useDrawingHistory, useImageDrop } from "@/hooks";
 import { DRAW_TOOL, type Drawing, type DrawTool, STEP } from "@/types";
-import { isEmptyPixels } from "@/utils";
+import { getMainColors, isEmptyPixels } from "@/utils";
 
 interface DrawPageProps {
   /** 제한 시간이 끝나는 시각(타임스탬프). 이전으로 갔다 와도 이어서 흐름. 시작 전이면 null */
@@ -105,6 +106,16 @@ const DrawPage = ({
   const isImageLoading = imageStatus === "loading";
   // 이 화면에서는 크기를 바꿀 수 없고, 크기 고르기에서 다른 크기를 고르면 페이지가 도안을 지우므로 도안은 늘 캔버스와 같은 크기
   const visibleGuide = isGuideVisible && guide ? guide.pixels : null;
+  // 도안에 쓰인 주요 색을 팔레트 아래에 따로 보여줘 따라 그릴 때 바로 고를 수 있게 함 (기본 팔레트에 있는 색은 뺌)
+  const guideColors = useMemo(
+    () =>
+      guide
+        ? getMainColors(guide.pixels, GUIDE_COLOR_LIMIT + PALETTE.length)
+            .filter((guideColor) => !PALETTE.includes(guideColor))
+            .slice(0, GUIDE_COLOR_LIMIT)
+        : [],
+    [guide],
+  );
   // AI 도안을 기다리는 중에 화면을 떠나면 결과가 버려지고 횟수만 차감되므로 이전·다음 모두 잠금
   // 요청은 서버 타임아웃이 있어 반드시 끝나므로, 시간이 끝난 뒤에도 완료될 때까지 기다림
   // 시간이 끝나면 이전으로 돌아가 다시 그릴 수 없고, 빈 그림이어도 다음으로만 진행
@@ -443,7 +454,13 @@ const DrawPage = ({
 
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
-            <ColorPalette value={color} onChange={handleColorChange} disabled={isLocked} />
+            <ColorPalette
+              value={color}
+              onChange={handleColorChange}
+              suggestedColors={guideColors}
+              suggestedLabel="도안 색상"
+              disabled={isLocked}
+            />
           </fieldset>
         </aside>
       </div>
