@@ -240,7 +240,8 @@ const DrawPage = ({
       />
 
       <div className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <section className="flex flex-col items-center gap-3">
+        {/* 넓은 화면에서는 오른쪽 패널을 내려도 캔버스가 화면에 남아 있도록 고정 */}
+        <section className="flex flex-col items-center gap-3 lg:sticky lg:top-6">
           <div className="relative w-full max-w-[min(34rem,60dvh)] rounded-3xl bg-background p-3 shadow-[5px_5px_10px_var(--neu-dark),-5px_-5px_10px_var(--neu-light)]">
             <PixelCanvas
               drawing={drawing}
@@ -292,6 +293,50 @@ const DrawPage = ({
               타이머를 시작하면 도안·도구를 쓸 수 있어요.
             </p>
           )}
+          {/* 그리는 내내 쓰는 도구·색상을 위에 두어, 화면을 내리지 않고 색을 골라 바로 이어 그릴 수 있게 함
+              AI 도안·이미지 가져오기는 처음에 한 번 쓰는 기능이라 아래에 둠 */}
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-3 text-sm font-semibold text-muted">도구</legend>
+            <div className="grid grid-cols-3 gap-3">
+              <ToolButton
+                label="펜"
+                icon="pen"
+                onClick={() => setTool(DRAW_TOOL.PEN)}
+                active={tool === DRAW_TOOL.PEN}
+                disabled={isLocked}
+              />
+              <ToolButton
+                label="지우개"
+                icon="eraser"
+                onClick={() => setTool(DRAW_TOOL.ERASER)}
+                active={tool === DRAW_TOOL.ERASER}
+                disabled={isLocked}
+              />
+              <ToolButton
+                label="채우기"
+                icon="fill"
+                onClick={() => setTool(DRAW_TOOL.FILL)}
+                active={tool === DRAW_TOOL.FILL}
+                disabled={isLocked}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <ToolButton label="되돌리기" icon="undo" onClick={undo} disabled={isLocked || !canUndo} />
+              <ToolButton label="초기화" icon="reset" onClick={reset} disabled={isLocked || isEmpty} />
+            </div>
+          </fieldset>
+
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
+            <ColorPalette
+              value={color}
+              onChange={handleColorChange}
+              suggestedColors={guideColors}
+              suggestedLabel="도안 색상"
+              disabled={isLocked}
+            />
+          </fieldset>
+
           <form className="flex flex-col gap-3" onSubmit={handleGenerateDraft}>
             <div className="flex items-center justify-between">
               <label htmlFor="draft-keyword" className="text-sm font-semibold text-muted">
@@ -423,47 +468,6 @@ const DrawPage = ({
             )}
           </form>
 
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">도구</legend>
-            <div className="grid grid-cols-3 gap-3">
-              <ToolButton
-                label="펜"
-                icon="pen"
-                onClick={() => setTool(DRAW_TOOL.PEN)}
-                active={tool === DRAW_TOOL.PEN}
-                disabled={isLocked}
-              />
-              <ToolButton
-                label="지우개"
-                icon="eraser"
-                onClick={() => setTool(DRAW_TOOL.ERASER)}
-                active={tool === DRAW_TOOL.ERASER}
-                disabled={isLocked}
-              />
-              <ToolButton
-                label="채우기"
-                icon="fill"
-                onClick={() => setTool(DRAW_TOOL.FILL)}
-                active={tool === DRAW_TOOL.FILL}
-                disabled={isLocked}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <ToolButton label="되돌리기" icon="undo" onClick={undo} disabled={isLocked || !canUndo} />
-              <ToolButton label="초기화" icon="reset" onClick={reset} disabled={isLocked || isEmpty} />
-            </div>
-          </fieldset>
-
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">색상</legend>
-            <ColorPalette
-              value={color}
-              onChange={handleColorChange}
-              suggestedColors={guideColors}
-              suggestedLabel="도안 색상"
-              disabled={isLocked}
-            />
-          </fieldset>
         </aside>
       </div>
 
