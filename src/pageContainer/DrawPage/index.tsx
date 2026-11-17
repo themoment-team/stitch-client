@@ -26,6 +26,7 @@ import {
   DRAW_TIME_LIMIT,
   DRAW_TIME_WARNING,
   DRAW_TIME_WARNING_MODAL_MS,
+  getStepNumber,
   getImageSearchUrl,
   IMAGE_SEARCH_KEYWORD_MAX_LENGTH,
   PALETTE,
@@ -34,16 +35,16 @@ import {
   SMALL_SECONDARY_BUTTON_STYLES,
 } from "@/constants";
 import { useCountdown, useDrawingHistory, useImageDrop } from "@/hooks";
-import { DEFAULT_GRID_SIZE, DRAW_TOOL, type Drawing, type DrawTool, GRID_SIZES } from "@/types";
-import { createEmptyPixels, isEmptyPixels } from "@/utils";
+import { DRAW_TOOL, type Drawing, type DrawTool, STEP } from "@/types";
+import { isEmptyPixels } from "@/utils";
 
 interface DrawPageProps {
   /** 제한 시간이 끝나는 시각(타임스탬프). 이전으로 갔다 와도 이어서 흐름. 시작 전이면 null */
   endAt: number | null;
   /** 타이머 시작 버튼을 눌렀을 때 */
   onTimerStart: () => void;
-  /** 이전으로 갔다 돌아왔을 때 이어서 그릴 그림 */
-  initialDrawing: Drawing | null;
+  /** 그릴 그림. 크기 고르기에서 고른 크기의 빈 그림이거나, 이전으로 갔다 돌아왔을 때 이어서 그릴 그림 */
+  initialDrawing: Drawing;
   /** 이전으로 갔다 돌아왔을 때 다시 깔아 둘 도안 */
   initialGuide: Drawing | null;
   /** 남은 AI 도안 생성 횟수. 이전으로 갔다 와도 유지되도록 페이지에서 관리 */
@@ -52,11 +53,6 @@ interface DrawPageProps {
   onBack: (drawing: Drawing, guide: Drawing | null) => void;
   onNext: (drawing: Drawing, guide: Drawing | null) => void;
 }
-
-const EMPTY_DRAWING: Drawing = {
-  size: DEFAULT_GRID_SIZE,
-  pixels: createEmptyPixels(DEFAULT_GRID_SIZE),
-};
 
 type DraftStatus = "idle" | "loading" | "blocked" | "limit" | "dailyLimit" | "error";
 type ImageStatus = "idle" | "loading" | "unsupported" | "tooLarge" | "dailyLimit" | "error";
@@ -79,8 +75,7 @@ const DrawPage = ({
   onBack,
   onNext,
 }: DrawPageProps) => {
-  const { drawing, canUndo, startStroke, paint, endStroke, fill, undo, reset, resize } =
-    useDrawingHistory(initialDrawing ?? EMPTY_DRAWING);
+  const { drawing, canUndo, startStroke, paint, endStroke, fill, undo, reset } = useDrawingHistory(initialDrawing);
   const { remaining, isOver } = useCountdown(endAt, DRAW_TIME_LIMIT);
   const [tool, setTool] = useState<DrawTool>(DRAW_TOOL.PEN);
   const [color, setColor] = useState(PALETTE[0]);
@@ -104,12 +99,12 @@ const DrawPage = ({
   const isEmpty = isEmptyPixels(drawing.pixels);
   const isStarted = endAt !== null;
   // 타이머를 시작하기 전과 시간이 끝난 뒤에는 그리기 도구를 모두 잠금
-  // AI가 도안을 그리는 동안에도 캔버스는 계속 쓸 수 있고, 도안 입력과 캔버스 크기만 잠금
+  // AI가 도안을 그리는 동안에도 캔버스는 계속 쓸 수 있고, 도안 입력만 잠금
   const isLocked = !isStarted || isOver;
   const isDraftLoading = draftStatus === "loading";
   const isImageLoading = imageStatus === "loading";
-  // 도안은 만든 캔버스 크기에서만 보여줌 (크기를 바꿨다 되돌리면 다시 보임)
-  const visibleGuide = isGuideVisible && guide?.size === drawing.size ? guide.pixels : null;
+  // 이 화면에서는 크기를 바꿀 수 없고, 크기 고르기에서 다른 크기를 고르면 페이지가 도안을 지우므로 도안은 늘 캔버스와 같은 크기
+  const visibleGuide = isGuideVisible && guide ? guide.pixels : null;
   // AI 도안을 기다리는 중에 화면을 떠나면 결과가 버려지고 횟수만 차감되므로 이전·다음 모두 잠금
   // 요청은 서버 타임아웃이 있어 반드시 끝나므로, 시간이 끝난 뒤에도 완료될 때까지 기다림
   // 시간이 끝나면 이전으로 돌아가 다시 그릴 수 없고, 빈 그림이어도 다음으로만 진행
@@ -140,7 +135,6 @@ const DrawPage = ({
     // 도안은 하나만 깔리므로, 돌고 있는 AI 도안을 나중에 끝난 이미지가 덮어쓰지 않도록 함께 막음 (반대도 마찬가지)
     if (isLocked || isConvertingImageRef.current || isRequestingDraftRef.current) return;
 
-    // 변환하는 동안 캔버스 크기는 잠가 두므로 시작할 때의 크기로 만듦
     const { size } = drawing;
     isConvertingImageRef.current = true;
     setImageStatus("loading");
@@ -225,7 +219,7 @@ const DrawPage = ({
   return (
     <StepCard size="wide">
       <StepHeader
-        current={1}
+        current={getStepNumber(STEP.DRAW)}
         title="자유롭게 그려보세요"
         onBack={() => onBack(drawing, guide)}
         backDisabled={!canGoBack}
@@ -282,7 +276,7 @@ const DrawPage = ({
         <aside className="mx-auto flex w-full max-w-[34rem] flex-col gap-6 text-left">
           {!isStarted && (
             <p className="text-sm font-medium text-muted" role="status">
-              타이머를 시작하면 도안·캔버스 크기·도구를 쓸 수 있어요.
+              타이머를 시작하면 도안·도구를 쓸 수 있어요.
             </p>
           )}
           <form className="flex flex-col gap-3" onSubmit={handleGenerateDraft}>
@@ -331,11 +325,6 @@ const DrawPage = ({
                 <button type="button" onClick={() => setGuide(null)} className={SMALL_SECONDARY_BUTTON_STYLES}>
                   도안 지우기
                 </button>
-                {guide.size !== drawing.size && (
-                  <span className="text-xs text-subtle">
-                    도안은 {guide.size}×{guide.size} 캔버스에서 보여요
-                  </span>
-                )}
               </div>
             )}
             {draftStatus === "blocked" && (
@@ -420,21 +409,6 @@ const DrawPage = ({
               </p>
             )}
           </form>
-
-          <fieldset className="flex flex-col gap-3">
-            <legend className="mb-3 text-sm font-semibold text-muted">캔버스 크기</legend>
-            <div className="grid grid-cols-3 gap-3">
-              {GRID_SIZES.map((size) => (
-                <ToolButton
-                  key={size}
-                  label={`${size}×${size}`}
-                  onClick={() => resize(size)}
-                  active={drawing.size === size}
-                  disabled={isLocked || isDraftLoading || isImageLoading}
-                />
-              ))}
-            </div>
-          </fieldset>
 
           <fieldset className="flex flex-col gap-3">
             <legend className="mb-3 text-sm font-semibold text-muted">도구</legend>
