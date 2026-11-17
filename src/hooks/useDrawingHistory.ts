@@ -38,10 +38,15 @@ const drawingReducer = (state: DrawingState, action: DrawingAction): DrawingStat
 
     case "PAINT": {
       const { pixels } = state.current;
-      if (action.indices.every((index) => pixels[index] === action.color)) return state;
+      // 펜은 빈 칸에만 칠하고, 이미 색이 있는 칸은 지우개로 지운 뒤에만 다시 칠할 수 있음
+      const targets =
+        action.color === null
+          ? action.indices.filter((index) => pixels[index] !== null)
+          : action.indices.filter((index) => pixels[index] === null);
+      if (targets.length === 0) return state;
 
       const nextPixels = [...pixels];
-      action.indices.forEach((index) => {
+      targets.forEach((index) => {
         nextPixels[index] = action.color;
       });
       return { ...state, current: { ...state.current, pixels: nextPixels } };
@@ -56,8 +61,8 @@ const drawingReducer = (state: DrawingState, action: DrawingAction): DrawingStat
 
     case "FILL": {
       const { size, pixels } = state.current;
-      // 이미 같은 색인 영역은 그림도 되돌리기 기록도 바꾸지 않음
-      if (pixels[action.index] === action.color) return state;
+      // 빈 영역만 채우고, 이미 색칠된 영역은 그림도 되돌리기 기록도 바꾸지 않음
+      if (pixels[action.index] !== null) return state;
 
       const nextPixels = [...pixels];
       getFillIndices(pixels, size, action.index).forEach((index) => {
