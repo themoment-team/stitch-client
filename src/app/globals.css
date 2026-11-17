@@ -94,13 +94,12 @@ body {
     margin: 0;
   }
 
-  body * {
-    visibility: hidden;
-  }
-
-  .print-target,
-  .print-target * {
-    visibility: visible;
+  /*
+   * 화면 내용을 숨기기만 하면 자리는 그대로 남아, 화면 길이에 따라 인쇄 페이지 수나 배율이 달라질 수 있음
+   * 라벨지(body 바로 아래)만 남기고 나머지는 아예 빼서 매번 같은 위치에 찍히게 함
+   */
+  body > :not(.print-target) {
+    display: none !important;
   }
 
   /* 라벨 위치가 mm 단위로 맞아야 하므로 여백 없이 용지 왼쪽 위 끝에 붙임 */
