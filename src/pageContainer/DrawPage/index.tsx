@@ -106,13 +106,15 @@ const DrawPage = ({
   const isImageLoading = imageStatus === "loading";
   // 이 화면에서는 크기를 바꿀 수 없고, 크기 고르기에서 다른 크기를 고르면 페이지가 도안을 지우므로 도안은 늘 캔버스와 같은 크기
   const visibleGuide = isGuideVisible && guide ? guide.pixels : null;
-  // 도안에 쓰인 주요 색을 팔레트 아래에 따로 보여줘 따라 그릴 때 바로 고를 수 있게 함 (기본 팔레트에 있는 색은 뺌)
+  // 도안에 쓰인 주요 색을 팔레트 아래에 따로 보여줘 따라 그릴 때 바로 고를 수 있게 함
+  // 기본 팔레트에 있는 색은 고르기 전에 빼야, 팔레트 색과 비슷한 도안 색이 팔레트 색에 합쳐져 함께 사라지지 않음
   const guideColors = useMemo(
     () =>
       guide
-        ? getMainColors(guide.pixels, GUIDE_COLOR_LIMIT + PALETTE.length)
-            .filter((guideColor) => !PALETTE.includes(guideColor))
-            .slice(0, GUIDE_COLOR_LIMIT)
+        ? getMainColors(
+            guide.pixels.filter((pixel) => pixel && !PALETTE.includes(pixel.toLowerCase())),
+            GUIDE_COLOR_LIMIT,
+          )
         : [],
     [guide],
   );

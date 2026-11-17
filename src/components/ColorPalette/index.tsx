@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { PALETTE } from "@/constants";
 
 interface ColorPaletteProps {
@@ -36,6 +37,7 @@ const Swatch = ({ color, selected, disabled, onSelect }: SwatchProps) => (
 const ColorPalette = ({ value, onChange, suggestedColors = [], suggestedLabel, disabled = false }: ColorPaletteProps) => {
   // 추가 색을 고른 경우에도 직접 선택(무지개) 칸이 선택된 것처럼 보이지 않도록 둘 다 확인
   const isCustom = !PALETTE.includes(value) && !suggestedColors.includes(value);
+  const suggestedLabelId = useId();
 
   return (
     <div className={`flex flex-col gap-4 ${disabled ? "pointer-events-none opacity-40" : ""}`}>
@@ -64,8 +66,13 @@ const ColorPalette = ({ value, onChange, suggestedColors = [], suggestedLabel, d
       </div>
 
       {suggestedColors.length > 0 && (
-        <div className="flex flex-col gap-3">
-          {suggestedLabel && <span className="text-xs font-semibold text-muted">{suggestedLabel}</span>}
+        // 화면 낭독기에서도 아래 색들이 어떤 묶음인지 들리도록 이름을 붙인 그룹으로 묶음
+        <div role="group" aria-labelledby={suggestedLabel ? suggestedLabelId : undefined} className="flex flex-col gap-3">
+          {suggestedLabel && (
+            <span id={suggestedLabelId} className="text-xs font-semibold text-muted">
+              {suggestedLabel}
+            </span>
+          )}
           <div className="grid grid-cols-6 justify-items-center gap-3">
             {suggestedColors.map((color) => (
               <Swatch key={color} color={color} selected={value === color} disabled={disabled} onSelect={onChange} />
