@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DEFAULT_LABEL_LAYOUT, LABEL_LAYOUT_STORAGE_KEY } from "@/constants";
+import { DEFAULT_LABEL_LAYOUT, LABEL_LAYOUT_STORAGE_KEY, LEGACY_LABEL_LAYOUT_STORAGE_KEYS } from "@/constants";
 import type { LabelLayout } from "@/types";
 
 const isLabelLayout = (value: unknown): value is LabelLayout => {
@@ -12,6 +12,8 @@ const isLabelLayout = (value: unknown): value is LabelLayout => {
 
 const readStoredLayout = (): LabelLayout => {
   try {
+    // 이전 배치 기준 값은 더는 쓰지 않으므로 읽는 김에 지움 (여러 번 지워도 결과가 같음)
+    LEGACY_LABEL_LAYOUT_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key));
     const stored = JSON.parse(window.localStorage.getItem(LABEL_LAYOUT_STORAGE_KEY) ?? "null");
     return isLabelLayout(stored) ? stored : DEFAULT_LABEL_LAYOUT;
   } catch {
