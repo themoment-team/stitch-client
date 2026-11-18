@@ -1,4 +1,10 @@
-import { LABEL_LAYOUT_STEP, SMALL_PRIMARY_BUTTON_STYLES, SMALL_SECONDARY_BUTTON_STYLES } from "@/constants";
+import type { MouseEvent } from "react";
+import {
+  LABEL_LAYOUT_FINE_STEP,
+  LABEL_LAYOUT_STEP,
+  SMALL_PRIMARY_BUTTON_STYLES,
+  SMALL_SECONDARY_BUTTON_STYLES,
+} from "@/constants";
 import type { LabelLayout } from "@/types";
 
 interface LabelLayoutPanelProps {
@@ -31,8 +37,12 @@ const formatMm = (value: number) => `${Number(value.toFixed(2))}mm`;
  * 간격은 가운데를 기준으로 양쪽에 똑같이 펼쳐지고, 바꾼 값은 그 기기에 저장됨
  */
 const LabelLayoutPanel = ({ layout, onChange, onReset }: LabelLayoutPanelProps) => {
-  const handleStep = (key: keyof LabelLayout, direction: 1 | -1) =>
-    onChange({ ...layout, [key]: Math.max(0, layout[key] + LABEL_LAYOUT_STEP * direction) });
+  const handleStep = (key: keyof LabelLayout, direction: 1 | -1) => (event: MouseEvent<HTMLButtonElement>) => {
+    const step = event.shiftKey ? LABEL_LAYOUT_FINE_STEP : LABEL_LAYOUT_STEP;
+    // 0.1을 여러 번 더하면 소수 오차가 쌓이므로 0.01mm 단위로 반올림해 저장
+    const next = Math.round((layout[key] + step * direction) * 100) / 100;
+    onChange({ ...layout, [key]: Math.max(0, next) });
+  };
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-3 rounded-3xl bg-background p-4 text-left shadow-[inset_3px_3px_6px_var(--neu-dark),inset_-3px_-3px_6px_var(--neu-light)]">
@@ -42,19 +52,22 @@ const LabelLayoutPanel = ({ layout, onChange, onReset }: LabelLayoutPanelProps) 
           기본값으로
         </button>
       </div>
-      <p className="text-xs text-muted">버튼 한 번에 {formatMm(LABEL_LAYOUT_STEP)}씩 움직여요. 바꾼 값은 이 기기에 저장돼요.</p>
+      <p className="text-xs text-muted">
+        버튼 한 번에 {formatMm(LABEL_LAYOUT_STEP)}씩, Shift를 누른 채 누르면 {formatMm(LABEL_LAYOUT_FINE_STEP)}씩
+        움직여요. 바꾼 값은 이 기기에 저장돼요.
+      </p>
       <div className="flex flex-col gap-2">
         {CONTROLS.map(({ key, label, decrease, increase }) => (
           <div key={key} className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm text-muted">{label}</span>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => handleStep(key, -1)} className={SMALL_PRIMARY_BUTTON_STYLES}>
+              <button type="button" onClick={handleStep(key, -1)} className={SMALL_PRIMARY_BUTTON_STYLES}>
                 {decrease}
               </button>
               <span className="w-16 text-center text-sm font-semibold text-ink tabular-nums">
                 {formatMm(layout[key])}
               </span>
-              <button type="button" onClick={() => handleStep(key, 1)} className={SMALL_PRIMARY_BUTTON_STYLES}>
+              <button type="button" onClick={handleStep(key, 1)} className={SMALL_PRIMARY_BUTTON_STYLES}>
                 {increase}
               </button>
             </div>
