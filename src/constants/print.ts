@@ -16,38 +16,43 @@ export const LABEL_SHEET = {
 } as const;
 
 /**
- * 예전 고정 배치 (mm). 오려 쓰기 편하도록 스티커 사이를 넉넉히 띄움
- * 위 여백 35.5mm, 왼쪽 여백 28mm(오른쪽 27mm), 열 간격 17mm, 줄 간격 24mm
+ * 라벨지 규격 (mm). 지름 48mm 원형 라벨이 4열 × 5행
+ * 가로: 용지 끝에서 첫 원까지 좌우 6mm, 원 사이는 남는 길이를 고르게 나눈 2mm ((210 - 6×2 - 48×4) / 3)
+ * 세로: 첫 줄 원은 용지 위쪽 끝에서 17mm. 원 사이 간격은 실제 출력에서 첫 줄은 맞고
+ *       아래 줄로 갈수록 1mm씩 밀려 내려가, 6mm에서 1mm 줄인 5mm로 맞춤
  */
-const CLASSIC_LAYOUT = { marginTop: 35.5, marginLeft: 28, columnGap: 17, rowGap: 24 } as const;
+const LABEL_PAPER = { diameter: 48, marginLeft: 6, marginRight: 6, marginTop: 17, rowGap: 5 } as const;
+
+/** 좌우 여백을 뺀 너비에 원을 놓고 남는 길이를 고르게 나눈 원 사이 가로 간격 */
+const LABEL_COLUMN_GAP =
+  (PAPER_SIZE.width - LABEL_PAPER.marginLeft - LABEL_PAPER.marginRight - LABEL_PAPER.diameter * LABEL_SHEET.columns) /
+  (LABEL_SHEET.columns - 1);
+
+/** 원 하나의 중심에서 옆·아래 원의 중심까지 */
+const LABEL_PITCH = {
+  x: LABEL_PAPER.diameter + LABEL_COLUMN_GAP,
+  y: LABEL_PAPER.diameter + LABEL_PAPER.rowGap,
+} as const;
 
 /**
- * 기본 위치. 예전 고정 배치와 같은 자리에 찍히도록 가운데 기준 값으로 바꿔 둠
+ * 기본 위치. 가로 가운데는 좌우 여백을 뺀 영역의 한가운데, 세로 가운데는 첫 줄에서 원 중심 간격만큼 내려간 가운데 줄
+ * 스티커 사이를 원 중심 간격에 맞춰 그림이 원마다 정가운데에 오게 함
  * 프린터마다 밀리는 정도가 달라, 출력 화면 주소에 ?calibrate를 붙여 들어가면 직접 맞출 수 있음
  */
 export const DEFAULT_LABEL_LAYOUT: LabelLayout = {
-  // 가운데 두 열 사이 한가운데 = 왼쪽 두 열 끝 + 가운데 간격의 절반
-  centerX:
-    CLASSIC_LAYOUT.marginLeft +
-    (LABEL_SHEET.columns / 2) * LABEL_SHEET.labelWidth +
-    (LABEL_SHEET.columns / 2 - 1) * CLASSIC_LAYOUT.columnGap +
-    CLASSIC_LAYOUT.columnGap / 2,
-  // 가운데 줄의 한가운데 = 위쪽 줄들 + 가운데 줄 높이의 절반
-  centerY:
-    CLASSIC_LAYOUT.marginTop +
-    ((LABEL_SHEET.rows - 1) / 2) * (LABEL_SHEET.labelHeight + CLASSIC_LAYOUT.rowGap) +
-    LABEL_SHEET.labelHeight / 2,
-  centerColumnGap: CLASSIC_LAYOUT.columnGap,
-  columnGap: CLASSIC_LAYOUT.columnGap,
-  rowGap: CLASSIC_LAYOUT.rowGap,
-  outerRowGap: CLASSIC_LAYOUT.rowGap,
+  centerX: (LABEL_PAPER.marginLeft + PAPER_SIZE.width - LABEL_PAPER.marginRight) / 2,
+  centerY: LABEL_PAPER.marginTop + LABEL_PAPER.diameter / 2 + ((LABEL_SHEET.rows - 1) / 2) * LABEL_PITCH.y,
+  centerColumnGap: LABEL_PITCH.x - LABEL_SHEET.labelWidth,
+  columnGap: LABEL_PITCH.x - LABEL_SHEET.labelWidth,
+  rowGap: LABEL_PITCH.y - LABEL_SHEET.labelHeight,
+  outerRowGap: LABEL_PITCH.y - LABEL_SHEET.labelHeight,
 };
 
 /**
  * 출력 화면에서 맞춘 위치를 그 기기에 저장해 두는 키
- * 원형 라벨지 기준으로 맞춰 둔 값이 예전 배치를 덮어쓰지 않도록 키를 바꿈
+ * 이전 배치 기준으로 맞춰 둔 값이 새 라벨지 배치를 덮어쓰지 않도록 키를 바꿈
  */
-export const LABEL_LAYOUT_STORAGE_KEY = "stitch:label-layout:classic";
+export const LABEL_LAYOUT_STORAGE_KEY = "stitch:label-layout:circle-48";
 
 /** 위치 조정 버튼 한 번에 움직이는 거리 (mm) */
 export const LABEL_LAYOUT_STEP = 0.5;
