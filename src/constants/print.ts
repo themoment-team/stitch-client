@@ -4,15 +4,22 @@ import type { LabelLayout } from "@/types";
 export const PAPER_SIZE = { width: 210, height: 297 } as const;
 
 /**
+ * 스티커 한 칸에 들어갈 그림 크기 (mm)
+ * 정사각형 그림의 네 모서리가 지름 48mm 원 안에 들어가는 최대 크기는 48 / √2 ≈ 33.9mm
+ * 프린터가 조금 밀려 찍혀도 모서리가 원을 넘지 않도록 모서리마다 1mm 정도 여유를 두어 32mm로 함
+ */
+export const LABEL_DRAWING_SIZE = 32;
+
+/**
  * A4 한 장에 찍을 스티커 배치 (mm)
- * 26mm 스티커를 4열 × 5행(20개)으로 놓음
+ * 그림 크기만 한 칸을 4열 × 5행(20개)으로 놓음
  * 열은 짝수, 줄은 홀수여야 가운데 두 열 사이와 가운데 줄을 기준으로 펼칠 수 있음
  */
 export const LABEL_SHEET = {
   columns: 4,
   rows: 5,
-  labelWidth: 26,
-  labelHeight: 26,
+  labelWidth: LABEL_DRAWING_SIZE,
+  labelHeight: LABEL_DRAWING_SIZE,
 } as const;
 
 /**
@@ -56,9 +63,6 @@ export const LABEL_LAYOUT_STORAGE_KEY = "stitch:label-layout:circle-48";
 
 /** 위치 조정 버튼 한 번에 움직이는 거리 (mm) */
 export const LABEL_LAYOUT_STEP = 0.5;
-
-/** 스티커 한 칸에 들어갈 그림 크기 */
-export const LABEL_DRAWING_SIZE = 26;
 
 /** 다운로드 QR 칸에 들어갈 QR 크기 (아래 안내 문구 자리를 남김) */
 export const LABEL_QR_SIZE = 15;
